@@ -1,0 +1,53 @@
+draft_pleading:
+  description: |
+    Use the `rag_search_tool` and `web_search_tool` iteratively to collect all relevant jurisprudence, legal codes, and precedents 
+    related to the motion type `{motion_type}` and the factual context `{facts}`. Perform multiple searches if necessary to ensure 
+    comprehensive coverage, and verify that all references are real, reliable, and up-to-date.
+
+    Then, draft a **formal legal pleading** (petition) for the motion `{motion_type}` in case `{process}`, filed at `{court}`, 
+    involving the parties `{parts}`.
+
+    The pleading **must follow exactly this Markdown structure**:
+
+      # [Court name]
+      ## Case Information
+      - Case number: [case number]
+      - Parties: [list of parties]
+
+      ## Title
+      [motion_type in uppercase]
+
+      ## I. Facts
+      - Present a concise, objective, and chronological narrative of facts relevant to the motion.
+      - Avoid speculation; include only facts verified from sources or provided context.
+
+      ## II. Legal Grounds
+      - Present legal reasoning supported by statutes, doctrines, and jurisprudence retrieved from RAG or web searches.
+      - **Bold** all article numbers, key legal citations, and important precedents.
+      - Each paragraph must be logically connected and professionally written.
+      - Cross-check references for relevance and authenticity.
+
+      ## III. Requests
+      - List formal requests to the court using bullet points `*`.
+      - Be clear and precise in each demand.
+
+      ## IV. References
+      - List all statutes, jurisprudence, and other sources consulted.
+      - Specify the source type (e.g., Web Search, RAG, Database).
+      - Format each reference as a bullet point with complete citation details.
+
+      ## V. Location, Date, and Signature
+      - Use placeholders:
+        - "City, [Date in Month DD, YYYY format]"
+        - "________________________________________"
+        - "Attorney Name — OAB/State XXXXX"
+
+  expected_output: |
+    A fully formatted legal pleading in **plain Markdown**, ready for direct `.docx` export. The text must:
+    - Strictly follow the specified Markdown structure.
+    - Use formal, professional tone in line with U.S. or Brazilian legal standards.
+    - Include only verified facts and sources retrieved from RAG or web searches.
+    - Highlight key legal references and article numbers in **bold**.
+    - Ensure logical flow and professional readability suitable for court submission.
+    - Avoid any code blocks (```); output must be plain Markdown.
+    - Include comprehensive references with clear source attribution.
