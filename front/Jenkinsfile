@@ -9,7 +9,7 @@ properties([
       description: 'Select who to notify after deployment',
       value: 'duanny.matos@gmail.com,femuhamed@hotmail.com'
     ],
-    string(name: 'API_BASE_URL', defaultValue: 'evitable-rudolph-osmically.ngrok-free.dev', description: 'Build-time API base (VITE_API_BASE_URL)'),
+    string(name: 'API_BASE_URL', defaultValue: 'https://evitable-rudolph-osmically.ngrok-free.dev', description: 'Build-time API base (VITE_API_BASE_URL)'),
     string(name: 'S3_BUCKET', defaultValue: 'juricrew-front', description: 'Target S3 bucket'),
     string(name: 'REGION', defaultValue: 'us-east-2', description: 'Bucket region'),
     string(name: 'CLOUDFRONT_DISTRIBUTION_ID', defaultValue: '', description: 'Optional: CloudFront distribution to invalidate')
@@ -102,7 +102,7 @@ pipeline {
     stage('Notify') {
       steps {
         script {
-          def websiteUrlGuess = "http://${env.S3_BUCKET}.s3-website-${env.REGION}.amazonaws.com"
+          def websiteUrlGuess = "http://${env.S3_BUCKET}.s3-website.${env.REGION}.amazonaws.com"
           def objectUrl       = "https://${env.S3_BUCKET}.s3.${env.REGION}.amazonaws.com/index.html"
 
           emailext(

@@ -91,18 +91,25 @@ public class SecurityConfig {
     // List EXACT origins that will host your frontend (https!)
     // Add/remove to match what you actually use.
     cfg.setAllowedOriginPatterns(List.of(
-        // S3 static website endpoints (regional styles)
-        "https://*.s3.*.amazonaws.com",
-        "https://*.s3-website.*.amazonaws.com",
+    		  // S3 website (HTTP only)
+    		  "http://juricrew-front.s3-website.us-east-2.amazonaws.com",
+    		  // optional patterns if you use other buckets/regions later
+    		  "http://*.s3-website.*.amazonaws.com",
+    		  // REST-style S3 (if you ever open it; not needed for website)
+    		  "http://*.s3.*.amazonaws.com",
+    		  "https://*.s3.*.amazonaws.com",
 
-        // If you use CloudFront/custom domains for the UI, include them:
-        "https://*.cloudfront.net",
-        "https://k8s.lotto-gpt.io",
+    		  // Ngrok (HTTPS)
+    		  "https://evitable-rudolph-osmically.ngrok-free.dev",
 
-        // Local dev
-        "http://localhost:*",
-        "http://127.0.0.1:*"
-    ));
+    		  // CloudFront / custom (if you add later)
+    		  "https://*.cloudfront.net",
+    		  "https://k8s.lotto-gpt.io",
+
+    		  // Local dev
+    		  "http://localhost:*",
+    		  "http://127.0.0.1:*"
+    		));
 
     // Methods & headers commonly used by browsers during CORS
     cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
