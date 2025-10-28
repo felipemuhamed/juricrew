@@ -82,7 +82,7 @@ export default function NavigationBar() {
     <AppBar position="sticky" color="primary" elevation={1}>
       <Toolbar sx={{ gap: 1 }}>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          AI Copilot (On-Prem) • with Upload    {/* change helps verify */}
+          Juricrew - AI Motions Generator    {/* change helps verify */}
         </Typography>
 
         {/* Hidden file input */}
