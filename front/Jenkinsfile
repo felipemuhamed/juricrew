@@ -7,7 +7,7 @@ properties([
       quoteValue: false,
       escapeHtml: false,
       description: 'Select who to notify after deployment',
-      value: 'duanny.matos@gmail.com,samer.jamal@gmail.com'
+      value: 'duanny.matos@gmail.com,femuhamed@hotmail.com'
     ],
     string(name: 'API_BASE_URL', defaultValue: 'https://k8s.lotto-gpt.io', description: 'Build-time API base (VITE_API_BASE_URL)'),
     string(name: 'S3_BUCKET', defaultValue: 'juricrew', description: 'Target S3 bucket'),
