@@ -1,0 +1,35 @@
+{
+  "name": "ai-copilot-ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.5.0",
+    "@mui/material": "^6.0.2",
+    "axios": "^1.11.0",
+    "highlight.js": "^11.11.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.4",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.9.36",
+    "@types/highlight.js": "^9.12.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "cross-env": "^10.0.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}

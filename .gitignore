@@ -1,0 +1,50 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# Build output (Vite)
+dist/
+dist-ssr/
+.vite/
+
+# Caches
+.cache/
+.eslintcache
+.stylelintcache
+tsconfig.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.iml
+
+# Tests & coverage
+coverage/
+.nyc_output/
+jest-html-reporters-*
+cypress/videos/
+cypress/screenshots/
+playwright-report/
+test-results/
+**/target/
+
+# Storybook
+storybook-static/
+
+# Misc
+*.swp
+*.swo
+*.orig

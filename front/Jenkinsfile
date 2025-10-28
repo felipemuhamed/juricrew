@@ -1,0 +1,141 @@
+properties([
+  parameters([
+    [$class: 'ExtendedChoiceParameterDefinition',
+      name: 'NOTIFY_EMAILS',
+      type: 'PT_CHECKBOX',
+      multiSelectDelimiter: ',',
+      quoteValue: false,
+      escapeHtml: false,
+      description: 'Select who to notify after deployment',
+      value: 'duanny.matos@gmail.com,samer.jamal@gmail.com'
+    ],
+    string(name: 'API_BASE_URL', defaultValue: 'https://k8s.lotto-gpt.io', description: 'Build-time API base (VITE_API_BASE_URL)'),
+    string(name: 'S3_BUCKET', defaultValue: 'ai-copilot', description: 'Target S3 bucket'),
+    string(name: 'REGION', defaultValue: 'us-east-2', description: 'Bucket region'),
+    string(name: 'CLOUDFRONT_DISTRIBUTION_ID', defaultValue: '', description: 'Optional: CloudFront distribution to invalidate')
+  ])
+])
+
+pipeline {
+  agent any
+
+  environment {
+    // same credentials IDs you used for lotto-gpt
+    AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+
+    VITE_API_BASE_URL = "${API_BASE_URL}"
+    BUILD_DIR = "dist"
+  }
+
+  stages {
+    stage('Tooling Check') {
+      steps {
+        bat '''
+          node -v
+          npm -v
+          aws --version
+        '''
+      }
+    }
+
+    stage('Clean & Install') {
+      steps {
+        dir('ui') {
+          bat '''
+            if exist node_modules rmdir /S /Q node_modules
+            if exist %BUILD_DIR% rmdir /S /Q %BUILD_DIR%
+            if exist .env.production del /F /Q .env.production
+            npm ci
+          '''
+        }
+      }
+    }
+
+    stage('Build (Vite)') {
+      steps {
+        dir('ui') {
+          // write .env.production for Vite and build
+          bat '''
+            echo VITE_API_BASE_URL=%VITE_API_BASE_URL%> .env.production
+            set CI=false
+            npm run build
+            if not exist %BUILD_DIR% (
+              echo Build directory "%BUILD_DIR%" not found & exit /b 1
+            )
+          '''
+        }
+      }
+    }
+
+    stage('Deploy to S3') {
+      steps {
+        dir('ui') {
+          bat """
+            aws s3 sync %BUILD_DIR% s3://%S3_BUCKET%/ ^
+              --region %REGION% ^
+              --delete ^
+              --exclude \"*.html\" ^
+              --cache-control \"public,max-age=31536000,immutable\"
+
+            aws s3 sync %BUILD_DIR% s3://%S3_BUCKET%/ ^
+              --region %REGION% ^
+              --exclude \"*\" ^
+              --include \"*.html\" ^
+              --cache-control \"no-cache, no-store, must-revalidate\" ^
+              --content-type \"text/html; charset=utf-8\"
+          """
+        }
+      }
+    }
+
+    stage('Invalidate CloudFront (optional)') {
+      when { expression { return params.CLOUDFRONT_DISTRIBUTION_ID?.trim() } }
+      steps {
+        bat """
+          aws cloudfront create-invalidation ^
+            --distribution-id ${params.CLOUDFRONT_DISTRIBUTION_ID} ^
+            --paths "/*"
+        """
+      }
+    }
+
+    stage('Notify') {
+      steps {
+        script {
+          def websiteUrlGuess = "http://${env.S3_BUCKET}.s3-website-${env.REGION}.amazonaws.com"
+          def objectUrl       = "https://${env.S3_BUCKET}.s3.${env.REGION}.amazonaws.com/index.html"
+
+          emailext(
+            subject: '✅ ai-copilot Frontend Deployment Complete',
+            body: """🚀 Frontend deployed to S3
+
+Bucket: ${env.S3_BUCKET}
+Region: ${env.REGION}
+
+If static website hosting is enabled:
+- Website URL (guess): ${websiteUrlGuess}
+
+Direct object URL:
+- ${objectUrl}
+
+Build-time API base:
+- VITE_API_BASE_URL=${env.VITE_API_BASE_URL}
+""",
+            to: "${params.NOTIFY_EMAILS}"
+          )
+        }
+      }
+    }
+  }
+
+  post {
+    failure {
+      emailext(
+        subject: '❌ ai-copilot Frontend Deployment Failed',
+        body: "Something went wrong during the Jenkins pipeline. Please check the logs for details.",
+        to: "${params.NOTIFY_EMAILS}"
+      )
+    }
+  }
+}

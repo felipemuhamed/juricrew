@@ -1,7 +1,7 @@
-crewai[tools]
+crewai[tools]~=0.203.1
 requests
 fastapi>=0.68.0
-uvicorn>=0.15.0
+uvicorn[standard]>=0.22.0
 python-multipart>=0.0.5
 python-dotenv
 unstructured
@@ -10,3 +10,8 @@ python-docx
 ddgs
 chromadb
 sentence-transformers
+
+# Added for your LLM integration / runtime
+httpx>=0.27.0
+tiktoken>=0.7.0
+qdrant-client>=1.10.0

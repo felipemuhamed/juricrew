@@ -1,0 +1,66 @@
+server:
+  port: ${SERVER_PORT}
+  tomcat:
+    max-swallow-size: -1      
+    connection-timeout: 60s
+    remoteip:
+      trusted-proxies: 0.0.0.0/0
+  forward-headers-strategy: framework
+
+aws:
+  region: us-east-2
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 64MB
+      max-request-size: 64MB
+        
+        
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  mvc:
+    async:
+      request-timeout: 0
+      
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      hibernate.format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  storage:
+    rootDir: ./data
+    provider: s3 
+    s3:
+      bucket: juricrew
+  jwt:
+    ttl-seconds: 604800
+  jwtSecret: ${JWT_SECRET}
+  model:
+    baseUrl: ${MODEL_BASE_URL}
+    servedModel: ${SERVED_MODEL_NAME}
+    name: ${SERVED_MODEL_NAME}
+    stream-enabled: false
+  cookie:
+    domain: k8s.lotto-gpt.io
+    secure: true    
+  external:
+    processor:
+      baseUrl: ${APP_EXTERNAL_PROCESSOR_BASEURL}
+      processPath: ${APP_EXTERNAL_PROCESSOR_PROCESSPATH}
+      api-token: ${API_TOKEN}
+      model: ${LLM_MODEL}   
+    
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
