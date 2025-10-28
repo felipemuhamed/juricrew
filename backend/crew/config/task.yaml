@@ -4,50 +4,76 @@ draft_pleading:
     related to the motion type `{motion_type}` and the factual context `{facts}`. Perform multiple searches if necessary to ensure 
     comprehensive coverage, and verify that all references are real, reliable, and up-to-date.
 
-    Then, draft a **formal legal pleading** (petition) for the motion `{motion_type}` in case `{process}`, filed at `{court}`, 
+    Then, draft a **formal legal pleading (petition)** for the motion `{motion_type}` in case `{process}`, filed at `{court}`, 
     involving the parties `{parts}`.
 
-    The pleading **must follow exactly this Markdown structure**:
+    The motion must be written in **authentic legal prose**, reflecting the tone and structure of real court filings (U.S. or Brazilian format).
+    The text should include paragraph numbering, procedural certification, and signature formatting consistent with official court documents.
 
-      # [Court name]
-      ## Case Information
-      - Case number: [case number]
-      - Parties: [list of parties]
+    Follow **exactly** this Markdown structure:
 
-      ## Title
-      [motion_type in uppercase]
+      # [Court Name]
+      ## Case Caption
+      [Full court caption as in official pleadings — court name, jurisdiction, and parties]
 
-      ## I. Facts
-      - Present a concise, objective, and chronological narrative of facts relevant to the motion.
-      - Avoid speculation; include only facts verified from sources or provided context.
+      ---
+      **CASE NO.:** [case number]  
+      **[Plaintiff Name]**,  
+      Plaintiff,  
 
-      ## II. Legal Grounds
-      - Present legal reasoning supported by statutes, doctrines, and jurisprudence retrieved from RAG or web searches.
-      - **Bold** all article numbers, key legal citations, and important precedents.
-      - Each paragraph must be logically connected and professionally written.
-      - Cross-check references for relevance and authenticity.
+      vs.  
 
-      ## III. Requests
-      - List formal requests to the court using bullet points `*`.
-      - Be clear and precise in each demand.
+      **[Defendant Name]**,  
+      Defendant.  
+      ---
 
-      ## IV. References
-      - List all statutes, jurisprudence, and other sources consulted.
-      - Specify the source type (e.g., Web Search, RAG, Database).
-      - Format each reference as a bullet point with complete citation details.
+      ## TITLE  
+      [MOTION TYPE IN UPPERCASE — e.g., "PLAINTIFF’S MOTION TO COMPEL DEFENDANT’S COMPLIANCE WITH RULE 1.351(E) REQUEST FOR COPIES"]
 
-      ## V. Location, Date, and Signature
-      - Use placeholders:
-        - "City, [Date in Month DD, YYYY format]"
-        - "________________________________________"
-        - "Attorney Name — OAB/State XXXXX"
+      ## I. INTRODUCTION  
+      Provide a clear and formal introduction stating who files the motion, under which rule/statute, and for what purpose.  
+      The tone must be professional and concise.
+
+      ## II. FACTUAL BACKGROUND  
+      Present the relevant facts in chronological order using **numbered paragraphs (1., 2., 3., etc.)**.  
+      Include verified facts or those drawn from the contextual data. Avoid conjecture.
+
+      ## III. LEGAL GROUNDS  
+      - Present well-structured arguments supported by applicable laws, procedural rules, and jurisprudence.  
+      - Highlight every article, rule, or precedent in **bold** (e.g., **Rule 1.351(e)**, **Art. 5, CF/88**).  
+      - Ensure legal reasoning is coherent, persuasive, and supported by authentic citations.
+
+      ## IV. RULE 1.202 CERTIFICATION  
+      Insert the procedural certification in formal tone, stating efforts made to confer with opposing counsel prior to filing the motion.  
+      The certification should be written as in real pleadings, such as:
+
+      > I certify that prior to the filing of this motion, I contacted defense counsel, [Defense Counsel Name], on [Date of Contact], and left a message regarding the matter at issue.  
+      > I will continue efforts to resolve this motion before a hearing, and based on our previous discussions, I expect the issue will be resolved without need for judicial intervention.
+
+      ## V. REQUEST FOR RELIEF  
+      Conclude with the formal “WHEREFORE” paragraph, clearly specifying the relief sought.  
+      Then list the requested orders using bullet points `*` for each item.
+
+      ## VI. REFERENCES  
+      List all legal sources, statutes, and jurisprudence cited.  
+      - Specify whether each reference came from RAG or web search.  
+      - Provide full citation details.
+
+      ## VII. SIGNATURE BLOCK  
+      Include the following placeholders for completion:
+      - “City, [Month DD, YYYY]”  
+      - “________________________________________”  
+      - “[Attorney Name] — OAB/State XXXXX”  
+      - “Attorney for [Party Name]”  
+      - “[Law Firm Name, Address, Phone, Email]”
 
   expected_output: |
-    A fully formatted legal pleading in **plain Markdown**, ready for direct `.docx` export. The text must:
-    - Strictly follow the specified Markdown structure.
-    - Use formal, professional tone in line with U.S. or Brazilian legal standards.
-    - Include only verified facts and sources retrieved from RAG or web searches.
-    - Highlight key legal references and article numbers in **bold**.
-    - Ensure logical flow and professional readability suitable for court submission.
-    - Avoid any code blocks (```); output must be plain Markdown.
-    - Include comprehensive references with clear source attribution.
+    A fully formatted legal pleading in **plain Markdown**, ready for `.docx` or `.pdf` export, containing:
+    - Natural legal tone modeled after authentic motions.
+    - Numbered factual and argument sections.
+    - A **realistic Rule 1.202 Certification** block with contextual variables.
+    - All legal references properly bolded.
+    - A clean structure mirroring real-world petitions, suitable for court filing.
+    - No code blocks or extraneous markdown syntax.
+    - Comprehensive and verifiable references.
+
