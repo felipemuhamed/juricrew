@@ -53,7 +53,7 @@ public class MotionEntity {
 	private LocalDate hearingDate;
 
 	@Lob
-	private String tags; // JSON or CSV as text (simple for POC)
+	private String tags;
 
 	@Lob
 	private String notes;
@@ -61,7 +61,6 @@ public class MotionEntity {
 	private String templateKey;
 	private String templateVersion;
 
-	// Postgres JSONB column; adjust if using another DB
 	@Column(name = "input_snapshot", columnDefinition = "jsonb")
 	@JdbcTypeCode(SqlTypes.JSON)
 	private JsonNode inputSnapshot;
@@ -85,14 +84,16 @@ public class MotionEntity {
 
 	private OffsetDateTime generatedAt;
 	private OffsetDateTime filedAt;
-	
-	// getter/setter
-    public JsonNode getInputSnapshot() { return inputSnapshot; }
-    public MotionEntity setInputSnapshot(JsonNode inputSnapshot) {
-        this.inputSnapshot = inputSnapshot;
-        return this; // keep chain-style like your other setters
-    }
-    
+
+	public JsonNode getInputSnapshot() {
+		return inputSnapshot;
+	}
+
+	public MotionEntity setInputSnapshot(JsonNode inputSnapshot) {
+		this.inputSnapshot = inputSnapshot;
+		return this;
+	}
+
 	@PrePersist
 	void onCreate() {
 		final OffsetDateTime now = OffsetDateTime.now();

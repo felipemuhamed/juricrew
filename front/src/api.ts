@@ -25,6 +25,15 @@ export type DocRequestDTO = {
   };
 };
 
+// When hydrating from DB, some properties may be missing.
+// Keep a lenient variant for GET /docs/conversations/{id}/latest.
+export type DocRequestDTOHydrate = {
+  projectId?: string | null;
+  subfolder?: string | null;
+  requestedFileName?: string | null;
+  fields?: Partial<DocRequestDTO["fields"]>;
+};
+
 // ✅ Align with backend: { motionId, status, outputPath }
 export type DocProcessResponse = {
   motionId: string; // UUID serialized as string
@@ -287,9 +296,23 @@ export const api = {
   },
 
   /** 🔎 Get the latest generated document for a case number (for immediate Download). */
-  latestDocByCase: async (caseNumber: string): Promise<LatestDocResp> => {
-    const r = await http.get(`/docs/latest`, { params: { caseNumber } });
+  latestDocByCase: async (caseNumber: string, projectId?: string | null) => {
+    const r = await http.get(`/docs/latest`, {
+      params: { caseNumber, ...(projectId ? { projectId } : {}) },
+    });
     return r.data as LatestDocResp;
+  },
+
+  /** 🆕 Hydrate the form from DB (conversation + current user). */
+  latestDocForConversation: async (
+    conversationId: string
+  ): Promise<DocRequestDTOHydrate | null> => {
+    const r = await http.get(`/docs/conversations/${conversationId}/latest`, {
+      // Accept 200 OK or 204 No Content without throwing:
+      validateStatus: (s) => (s >= 200 && s < 300) || s === 304
+    });
+    // If backend returns 204 or empty, axios data can be undefined
+    return (r.status === 204 || r.data == null) ? null : (r.data as DocRequestDTOHydrate);
   },
 
   listMotions: async (projectId?: string | null): Promise<Motion[]> => {
@@ -309,5 +332,4 @@ export const api = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
-
 };

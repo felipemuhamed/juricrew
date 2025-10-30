@@ -16,9 +16,16 @@ public class AppUserPrincipal implements UserDetails {
 		this.user = user;
 	}
 
+	public java.util.UUID getId() {
+		return user.getId();
+	}
+
+	public String getEmail() {
+		return user.getEmail();
+	}
+
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		// You don't have a role field yet; default to ROLE_USER.
 		return List.of(new SimpleGrantedAuthority("ROLE_USER"));
 	}
 
@@ -50,5 +57,5 @@ public class AppUserPrincipal implements UserDetails {
 	@Override
 	public boolean isEnabled() {
 		return true;
-	} // no enabled flag in entity yet
+	}
 }

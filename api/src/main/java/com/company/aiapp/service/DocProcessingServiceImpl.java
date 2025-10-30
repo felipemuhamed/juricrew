@@ -2,6 +2,8 @@ package com.company.aiapp.service;
 
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import com.company.aiapp.config.storage.FileStorage;
@@ -13,8 +15,8 @@ import com.company.aiapp.dto.ProcessDocResponse;
 import com.company.aiapp.ext.PythonDocClient;
 import com.company.aiapp.repo.MotionRepository;
 
-import com.fasterxml.jackson.databind.JsonNode; // <-- add
-import com.fasterxml.jackson.databind.ObjectMapper; // <-- add
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +31,7 @@ public class DocProcessingServiceImpl implements DocProcessingService {
 	private final MotionRepository motionRepo;
 	private final PythonDocClient python;
 	private final FileStorage fileStorage;
-	private final ObjectMapper objectMapper; // <-- add
+	private final ObjectMapper objectMapper;
 
 	@Value("${app.storage.prefix:pleadings}")
 	private String storagePrefix;
@@ -37,39 +39,43 @@ public class DocProcessingServiceImpl implements DocProcessingService {
 	@Override
 	@Transactional
 	public ProcessDocResponse process(DocRequestDTO dto, String userId, String orgId) {
-		// 1) Persist motion/case/parties first (status DRAFT -> GENERATING)
+		// ---- 1) Persist motion/case/parties first (status DRAFT -> GENERATING)
+		final DocRequestDTO.Fields f = dto.getFields();
+		final List<String> defendants = f.getDefendant() == null ? Collections.emptyList() : f.getDefendant();
+
 		CreateMotionRequest req = new CreateMotionRequest();
-		req.motionType = safe(dto.fields.motion_type);
-		req.facts = safe(dto.fields.facts);
-		req.caseNumber = safe(dto.fields.case_number);
-		req.court = safe(dto.fields.court);
-		req.plaintiff = safe(dto.fields.plaintiff);
-		req.defendants = dto.fields.defendant; // FE already sends an array
+		req.motionType = safe(f.getMotion_type());
+		req.facts = safe(f.getFacts());
+		req.caseNumber = safe(f.getCase_number());
+		req.court = safe(f.getCourt());
+		req.plaintiff = safe(f.getPlaintiff());
+		req.defendants = defendants;
 		req.priority = "MEDIUM";
 
-		// create initial motion record
 		var created = motionService.create(req, userId, orgId);
 
-		// look up the newly created entity to update its status + folder + snapshot
+		// Load the entity we just created to enrich/update it
 		MotionEntity m = motionRepo.findById(created.id).orElseThrow();
 
-		// link to the selected folder (project) if any
+		// Ensure ownership/org are persisted (owner scoping for /docs/latest)
+		m.createdBy(parseUuidOrNull(userId));
+		m.orgId(parseUuidOrNull(orgId));
+
+		// Link to selected folder (project), if provided
 		UUID folderId = parseUuidOrNull(dto.getProjectId());
 		m.folderId(folderId);
 
-		// mark as generating
+		// Mark as generating and snapshot inputs
 		m.status(MotionStatus.GENERATING);
-
-		// keep a copy of input fields as JSON for pre-fill / auditing
-		JsonNode snapshot = objectMapper.valueToTree(dto.fields);
+		JsonNode snapshot = objectMapper.valueToTree(f);
 		m.setInputSnapshot(snapshot);
 
 		motionRepo.save(m);
 
-		// 2) Call Python generator
+		// ---- 2) Call Python generator
 		PythonDocClient.GenResult gen = python.generate(dto);
 
-		// 3) Save DOCX and update motion record
+		// ---- 3) Save DOCX and update motion record
 		try {
 			if (gen != null && "READY".equalsIgnoreCase(gen.status) && gen.docxBytes != null) {
 				String userLike = slugOrDefault(dto.getProjectId(), "public");
@@ -86,8 +92,8 @@ public class DocProcessingServiceImpl implements DocProcessingService {
 
 				return new ProcessDocResponse(m.id(), m.status().name(), m.outputDocxPath());
 			} else {
-				// generation failed or returned no data
-				m.status(MotionStatus.REJECTED).generationLog(gen != null ? gen.error : "No response from generator");
+				String errMsg = (gen != null ? gen.error : "No response from generator");
+				m.status(MotionStatus.REJECTED).generationLog(errMsg);
 				motionRepo.save(m);
 				return new ProcessDocResponse(m.id(), m.status().name(), null);
 			}

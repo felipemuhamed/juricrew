@@ -1,3 +1,4 @@
+// src/components/PleadingComposer.tsx
 import { Box, Fab, TextField, CircularProgress, Alert, Button, Chip, Stack } from "@mui/material";
 import { useMemo, useState, useEffect } from "react";
 import { api } from "../api"; // uses api.processDoc, api.downloadDoc, api.latestDocByCase
@@ -83,7 +84,7 @@ export default function PleadingComposer({
   const [submitting, setSubmitting] = useState(false);
   const [readyDoc, setReadyDoc] = useState<ReadyDoc | null>(null);
 
-  // ---- (Re)initialize when seed changes ----
+  // ---- (Re)initialize when seed or project changes ----
   useEffect(() => {
     if (initialValues) {
       setMotionType(initialValues.motionType ?? "");
@@ -93,22 +94,26 @@ export default function PleadingComposer({
       setCourt(initialValues.court ?? "");
       setPlaintiff(initialValues.plaintiff ?? "");
       setDefendants(initialValues.defendants ?? "");
-      // When a conversation is selected, try to load its latest generated doc:
+
+      // Load latest READY doc for this caseNumber **scoped to the project**
       if (initialValues?.caseNumber) {
         const caseNo = initialValues.caseNumber;
-        api.latestDocByCase(caseNo).then(r => {
-          if (r && r.status === "READY" && r.outputPath) {
-            const sugg = `pleading_${caseNo.replace(/[^a-zA-Z0-9._-]+/g, "_")}.docx`;
-            setReadyDoc({
-              motionId: r.motionId ?? "",
-              status: r.status,
-              outputPath: r.outputPath,   // pass directly to /docs/download?path=
-              suggestedName: sugg,
-            });
-          } else {
-            setReadyDoc(null);
-          }
-        }).catch(() => setReadyDoc(null));
+        api
+          .latestDocByCase(caseNo, projectId ?? null)
+          .then((r) => {
+            if (r && r.status === "READY" && r.outputPath) {
+              const sugg = `pleading_${caseNo.replace(/[^a-zA-Z0-9._-]+/g, "_")}.docx`;
+              setReadyDoc({
+                motionId: r.motionId ?? "",
+                status: r.status,
+                outputPath: r.outputPath,
+                suggestedName: sugg,
+              });
+            } else {
+              setReadyDoc(null);
+            }
+          })
+          .catch(() => setReadyDoc(null));
       }
       return;
     }
@@ -122,7 +127,7 @@ export default function PleadingComposer({
     setDefendants("");
     setReadyDoc(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialValues?.caseNumber]); // single source of truth
+  }, [initialValues?.caseNumber, projectId]); // include projectId so banner tracks folder
 
   // ---- Persist draft per conversation (optional) ----
   useEffect(() => {
@@ -130,7 +135,9 @@ export default function PleadingComposer({
     try {
       const data: Seed = { motionType, facts, caseNumber, court, plaintiff, defendants };
       localStorage.setItem(draftKey, JSON.stringify(data));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [draftKey, motionType, facts, caseNumber, court, plaintiff, defendants]);
 
   const valid =

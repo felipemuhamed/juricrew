@@ -275,6 +275,7 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
   };
 
   const handleSelectConv = async (c: Conv) => {
+    // stop any streams
     streamAbortRef.current?.abort();
     streamAbortRef.current = null;
     assistantIdRef.current = null;
@@ -284,68 +285,51 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
     setPendingTitle(c.title);
     setDraftTitle("");
 
-    // Load messages for this conversation
-    const msgs = await api.listMessages(c.id);
+    // ⬇️ reset the form immediately
+    setPleadingSeed(undefined);
 
-    // Try to parse a pleading summary from the latest message
-    const latest = msgs.length ? msgs[msgs.length - 1] : null;
-    const parsed = latest ? parsePleadingSummary(latest.content) : null;
+    // (optional) if you were using local drafts, stop now
+    setPleadingKey(undefined);
 
-    // Persist per-conversation draft key
-    const key = pleadingDraftKeyFor(c.id);
-    setPleadingKey(key);
+    // (optional) still load messages if you want to keep the history hidden afterward
+    await loadMessages(c.id);
 
-    // Preferred seed: draft from localStorage (if present). Fallback: parsed message.
-    let draftSeed: any | undefined = undefined;
+    // 🔎 NEW: hydrate the pleading form from DB for this conversation + user
     try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const obj = JSON.parse(raw);
-        if (obj && typeof obj === "object") draftSeed = obj;
-      }
-    } catch { /* ignore */ }
+      const dto = await api.latestDocForConversation(c.id);
 
-    if (draftSeed) {
-      setPleadingSeed({
-        motionType: draftSeed.motionType || "",
-        facts: draftSeed.facts || "",
-        caseNumber: draftSeed.caseNumber || "",
-        court: draftSeed.court || "",
-        plaintiff: draftSeed.plaintiff || "",
-        defendants: draftSeed.defendants || "",
-      });
+      if (dto?.fields) {
+        const f = dto.fields;
+        const seed = {
+          motionType: f.motion_type ?? "",
+          facts: f.facts ?? "",
+          caseNumber: f.case_number ?? "",
+          court: f.court ?? "",
+          plaintiff: f.plaintiff ?? "",
+          defendants: Array.isArray(f.defendant) ? f.defendant.join("; ") : "",
+        };
+        setPleadingSeed(seed);
 
-      // Retitle to case number from the draft if present
-      if (draftSeed.caseNumber && draftSeed.caseNumber !== c.title) {
-        try { await api.renameConversation(c.id, draftSeed.caseNumber); } catch {}
-        setConvs(arr => arr.map(x => x.id === c.id ? ({ ...x, title: draftSeed.caseNumber }) : x));
-        setCurrent(cur => cur && cur.id === c.id ? ({ ...cur, title: draftSeed.caseNumber }) : cur);
-        setPendingTitle(draftSeed.caseNumber);
+        // Optional: retitle conversation to case number from DB
+        if (seed.caseNumber && seed.caseNumber !== c.title) {
+          try { await api.renameConversation(c.id, seed.caseNumber); } catch { }
+          setConvs(arr => arr.map(x => x.id === c.id ? ({ ...x, title: seed.caseNumber }) : x));
+          setCurrent(cur => cur && cur.id === c.id ? ({ ...cur, title: seed.caseNumber }) : cur);
+          setPendingTitle(seed.caseNumber);
+        }
+      } else {
+        // no server seed — empty form
+        setPleadingSeed(undefined);
       }
-    } else if (parsed) {
-      const seed = {
-        motionType: parsed.motionType || "",
-        facts: parsed.facts || "",
-        caseNumber: parsed.caseNumber || "",
-        court: parsed.court || "",
-        plaintiff: parsed.plaintiff || "",
-        defendants: parsed.defendants || "",
-      };
-      setPleadingSeed(seed);
-      try { localStorage.setItem(key, JSON.stringify(seed)); } catch {}
-
-      if (parsed.caseNumber && parsed.caseNumber !== c.title) {
-        try { await api.renameConversation(c.id, parsed.caseNumber); } catch {}
-        setConvs(arr => arr.map(x => x.id === c.id ? ({ ...x, title: parsed.caseNumber }) : x));
-        setCurrent(cur => cur && cur.id === c.id ? ({ ...cur, title: parsed.caseNumber }) : cur);
-        setPendingTitle(parsed.caseNumber);
-      }
-    } else {
-      // If no draft and no parsed content, clear seed; Composer will be empty
+    } catch {
+      // if hydrate fails, fall back to empty
       setPleadingSeed(undefined);
     }
 
-    // Hide bubbles: we don't want chat UI for cases
+    // ⛔ stop using per-conversation localStorage drafts now that DB is the source of truth
+    setPleadingKey(undefined);
+
+    // hide chat bubbles for the pleadings view
     setMessages([]);
     if (isMobile) setSidebarOpen(false);
   };
@@ -706,11 +690,11 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
             <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", px: { xs: 1.5, sm: 2 }, pb: 4 }}>
               <PleadingCard>
                 <PleadingComposer
+                  key={current?.id ?? "none"}        // ⬅️ force remount on conv change
                   disabled={loading}
                   onSubmit={handlePleadingSubmit}
                   onCaseNumberChange={handleCaseNumberChange}
                   initialValues={pleadingSeed}
-                  draftKey={pleadingKey}
                   projectId={current?.projectId ?? null}
                 />
               </PleadingCard>
@@ -736,8 +720,10 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
               >
                 <PleadingCard>
                   <PleadingComposer
+                    key={`sticky-${current?.id ?? "none"}`}  // ⬅️ different key to avoid sharing state
                     disabled={loading}
                     onSubmit={handlePleadingSubmit}
+                    initialValues={pleadingSeed}             // keep it consistent
                     projectId={current?.projectId ?? null}
                   />
                 </PleadingCard>
