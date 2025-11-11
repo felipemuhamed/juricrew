@@ -25,13 +25,21 @@ export type DocRequestDTO = {
   };
 };
 
-// When hydrating from DB, some properties may be missing.
-// Keep a lenient variant for GET /docs/conversations/{id}/latest.
+// Hydrate by case + (optional) project
 export type DocRequestDTOHydrate = {
-  projectId?: string | null;
-  subfolder?: string | null;
-  requestedFileName?: string | null;
-  fields?: Partial<DocRequestDTO["fields"]>;
+  // projectId may or may not be present on different endpoints
+  projectId?: string;
+  motionId?: string | null;
+  status?: "DRAFT" | "GENERATING" | "READY" | "REJECTED" | null;
+  outputPath?: string | null;
+  fields: {
+    motion_type: string;
+    facts: string;
+    case_number: string;
+    court: string;
+    plaintiff?: string;
+    defendant?: string[];
+  };
 };
 
 // ✅ Align with backend: { motionId, status, outputPath }
@@ -113,9 +121,9 @@ function parseLegacyParts(
   const plaintiff = plaintiffMatch?.[1]?.trim();
   const defendant = defendantMatch
     ? defendantMatch[1]
-      .split(/[,;]\s*|\n+/g)
-      .map((s) => s.trim())
-      .filter(Boolean)
+        .split(/[,;]\s*|\n+/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
     : undefined;
 
   return { plaintiff, defendant };
@@ -308,11 +316,12 @@ export const api = {
     conversationId: string
   ): Promise<DocRequestDTOHydrate | null> => {
     const r = await http.get(`/docs/conversations/${conversationId}/latest`, {
-      // Accept 200 OK or 204 No Content without throwing:
-      validateStatus: (s) => (s >= 200 && s < 300) || s === 304
+      validateStatus: (s) =>
+        (s >= 200 && s < 300) || s === 304 || s === 204 || s === 404,
     });
-    // If backend returns 204 or empty, axios data can be undefined
-    return (r.status === 204 || r.data == null) ? null : (r.data as DocRequestDTOHydrate);
+    return r.status === 204 || r.status === 404 || r.data == null
+      ? null
+      : (r.data as DocRequestDTOHydrate);
   },
 
   listMotions: async (projectId?: string | null): Promise<Motion[]> => {
@@ -331,5 +340,17 @@ export const api = {
     await http.post("/docs/rag/upload", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+  },
+
+  latestDocSnapshotByCase: async (
+    caseNumber: string,
+    projectId?: string | null
+  ): Promise<DocRequestDTOHydrate | null> => {
+    const r = await http.get("/docs/latest-snapshot", {
+      params: { caseNumber, projectId: projectId ?? undefined },
+      validateStatus: (s) => (s >= 200 && s < 300) || s === 304 || s === 204,
+    });
+    if (r.status === 204) return null;
+    return r.data as DocRequestDTOHydrate;
   },
 };

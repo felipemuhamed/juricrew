@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.company.aiapp.domain.CaseEntity;
 import com.company.aiapp.domain.MotionEntity;
+import com.company.aiapp.domain.MotionStatus;
 import com.company.aiapp.domain.PartyEntity;
 import com.company.aiapp.domain.PartyRole;
 import com.company.aiapp.domain.Priority;
@@ -133,7 +134,29 @@ public class MotionServiceImpl implements MotionService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public Optional<LatestDocOnly> findLatestDocOnlyByCaseNumber(String caseNumber) {
-		return motionRepo.findLatestDocOnly(caseNumber, PageRequest.of(0, 1)).stream().findFirst();
-	}
+	public Optional<LatestDocOnly> findLatestDocOnlyByCaseNumber(String caseNumber, UUID userId, UUID folderId) {
+	    if (caseNumber == null || caseNumber.isBlank()) {
+	        return Optional.empty();
+	    }
+
+	    return motionRepo.findLatestDocOnlyNative(userId, caseNumber.trim(), folderId)
+	        .map(v -> {
+	            // id may come back as UUID (ideal) or String (from native). Handle both.
+	            Object rawId = v.getId();
+	            UUID id = null;
+	            if (rawId instanceof UUID u) {
+	                id = u;
+	            } else if (rawId != null) {
+	                id = UUID.fromString(rawId.toString());
+	            }
+
+	            // status is typically a String from the projection; convert to enum (null-safe)
+	            String rawStatus = v.getStatus().toString();
+	            MotionStatus status = (rawStatus == null || rawStatus.isBlank())
+	                ? null
+	                : MotionStatus.valueOf(rawStatus);
+
+	            return new LatestDocOnly(id, status, v.getOutputDocxPath());
+	        });
+	}	
 }

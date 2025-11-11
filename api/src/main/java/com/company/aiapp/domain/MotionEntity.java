@@ -61,7 +61,8 @@ public class MotionEntity {
 	private String templateKey;
 	private String templateVersion;
 
-	@Column(name = "input_snapshot", columnDefinition = "jsonb")
+//	@Column(name = "input_snapshot", columnDefinition = "jsonb")
+	@Column(name = "input_snapshot", columnDefinition = "text")
 	@JdbcTypeCode(SqlTypes.JSON)
 	private JsonNode inputSnapshot;
 

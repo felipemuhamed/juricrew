@@ -1,7 +1,6 @@
-// src/components/PleadingComposer.tsx
 import { Box, Fab, TextField, CircularProgress, Alert, Button, Chip, Stack } from "@mui/material";
 import { useMemo, useState, useEffect } from "react";
-import { api } from "../api"; // uses api.processDoc, api.downloadDoc, api.latestDocByCase
+import { api } from "../api"; // uses api.processDoc, api.downloadDoc, api.latestDocByCase, api.latestDocSnapshotByCase
 
 // Legacy type kept for optional onSubmit callback (no backend use)
 export type PleadingPayload = {
@@ -27,11 +26,11 @@ type DocRequestDTO = {
   };
 };
 
-// Backend response shape we receive
+// For /docs/process response (and /docs/latest)
 type ProcessDocResponse = {
-  motionId: string;          // UUID (string on the wire)
+  motionId: string | null;
   status: "DRAFT" | "GENERATING" | "READY" | "REJECTED";
-  outputPath: string;        // FE passes to download endpoint
+  outputPath: string | null;
 };
 
 type ReadyDoc = {
@@ -48,6 +47,11 @@ type Seed = Partial<{
   court: string;
   plaintiff: string;
   defendants: string;
+
+  // Optional banner info if parent provides it
+  motionId?: string;
+  status?: ReadyDoc["status"];
+  outputPath?: string;
 }>;
 
 // Optional environment-driven default project id
@@ -84,50 +88,91 @@ export default function PleadingComposer({
   const [submitting, setSubmitting] = useState(false);
   const [readyDoc, setReadyDoc] = useState<ReadyDoc | null>(null);
 
-  // ---- (Re)initialize when seed or project changes ----
+  // ---- (Re)initialize from initialValues ----
   useEffect(() => {
-    if (initialValues) {
-      setMotionType(initialValues.motionType ?? "");
-      setFacts(initialValues.facts ?? "");
-      setCaseNumber(initialValues.caseNumber ?? "");
-      if (initialValues.caseNumber) onCaseNumberChange?.(initialValues.caseNumber);
-      setCourt(initialValues.court ?? "");
-      setPlaintiff(initialValues.plaintiff ?? "");
-      setDefendants(initialValues.defendants ?? "");
-
-      // Load latest READY doc for this caseNumber **scoped to the project**
-      if (initialValues?.caseNumber) {
-        const caseNo = initialValues.caseNumber;
-        api
-          .latestDocByCase(caseNo, projectId ?? null)
-          .then((r) => {
-            if (r && r.status === "READY" && r.outputPath) {
-              const sugg = `pleading_${caseNo.replace(/[^a-zA-Z0-9._-]+/g, "_")}.docx`;
-              setReadyDoc({
-                motionId: r.motionId ?? "",
-                status: r.status,
-                outputPath: r.outputPath,
-                suggestedName: sugg,
-              });
-            } else {
-              setReadyDoc(null);
-            }
-          })
-          .catch(() => setReadyDoc(null));
-      }
+    if (!initialValues) {
+      // No seed (nothing selected): empty form and no banner
+      setMotionType("");
+      setFacts("");
+      setCaseNumber("");
+      setCourt("");
+      setPlaintiff("");
+      setDefendants("");
+      setReadyDoc(null);
       return;
     }
 
-    // No seed (nothing selected): empty form and no banner
-    setMotionType("");
-    setFacts("");
-    setCaseNumber("");
-    setCourt("");
-    setPlaintiff("");
-    setDefendants("");
-    setReadyDoc(null);
+    setMotionType(initialValues.motionType ?? "");
+    setFacts(initialValues.facts ?? "");
+    setCaseNumber(initialValues.caseNumber ?? "");
+    if (initialValues.caseNumber) onCaseNumberChange?.(initialValues.caseNumber);
+    setCourt(initialValues.court ?? "");
+    setPlaintiff(initialValues.plaintiff ?? "");
+    setDefendants(initialValues.defendants ?? "");
+
+    // If parent already passed banner info, show it immediately
+    if (initialValues.caseNumber && initialValues.status && initialValues.status !== "DRAFT") {
+      const sugg = `pleading_${initialValues.caseNumber.replace(/[^a-zA-Z0-9._-]+/g, "_")}.docx`;
+      setReadyDoc({
+        motionId: initialValues.motionId ?? "",
+        status: initialValues.status,
+        outputPath: initialValues.outputPath ?? "",
+        suggestedName: sugg,
+      });
+    } else {
+      setReadyDoc(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialValues?.caseNumber, projectId]); // include projectId so banner tracks folder
+  }, [initialValues?.caseNumber, initialValues?.status, projectId]);
+
+  // ---- Self-hydrate from backend on caseNumber change (populate form + banner) ----
+  useEffect(() => {
+    const cn = (caseNumber || "").trim();
+    if (!cn) return;
+
+    const effectiveProjectId = projectId ?? null;
+
+    api
+      .latestDocSnapshotByCase(cn, effectiveProjectId)
+      .then((dto) => {
+        if (!dto) {
+          // No saved doc for this case/project: clear banner but keep whatever is in the form
+          setReadyDoc(null);
+          return;
+        }
+
+        const f = dto.fields ?? ({} as any);
+
+        // Hydrate the FORM
+        setMotionType(f.motion_type ?? "");
+        setFacts(f.facts ?? "");
+        setCourt(f.court ?? "");
+        setPlaintiff(f.plaintiff ?? "");
+        setDefendants(
+          Array.isArray(f.defendant) ? f.defendant.join("; ") : ""
+        );
+
+        // Hydrate the BANNER from the same response
+        const status = (dto.status ?? "DRAFT") as ReadyDoc["status"];
+        const motionId = dto.motionId ?? "";
+        const outputPath = dto.outputPath ?? "";
+
+        if (status && status !== "DRAFT" && outputPath) {
+          const sugg = `pleading_${cn.replace(/[^a-zA-Z0-9._-]+/g, "_")}.docx`;
+          setReadyDoc({
+            motionId,
+            status,
+            outputPath,
+            suggestedName: sugg,
+          });
+        } else {
+          setReadyDoc(null);
+        }
+      })
+      .catch(() => {
+        // Keep whatever we had; just don't crash
+      });
+  }, [caseNumber, projectId]);
 
   // ---- Persist draft per conversation (optional) ----
   useEffect(() => {
@@ -202,9 +247,9 @@ export default function PleadingComposer({
       const suggestedName = requestedFileName ? `${requestedFileName}.docx` : fallbackName;
 
       setReadyDoc({
-        motionId: String(result.motionId),
+        motionId: String(result.motionId ?? ""),
         status: result.status,
-        outputPath: String(result.outputPath),
+        outputPath: String(result.outputPath ?? ""),
         suggestedName,
       });
 
@@ -218,7 +263,7 @@ export default function PleadingComposer({
   };
 
   const handleDownload = async () => {
-    if (!readyDoc || readyDoc.status !== "READY") return;
+    if (!readyDoc || readyDoc.status !== "READY" || !readyDoc.outputPath) return;
     try {
       const blob = await api.downloadDoc(readyDoc.outputPath);
       const url = window.URL.createObjectURL(blob);
@@ -245,7 +290,7 @@ export default function PleadingComposer({
   return (
     <Box sx={{ display: "grid", gap: 1.5, p: 1 }}>
       {/* Ready/Download banner (shows even on selection without regenerating) */}
-      {readyDoc && (
+      {readyDoc && readyDoc.status !== "DRAFT" && (
         <Alert
           severity={statusColor[readyDoc.status]}
           action={
@@ -254,7 +299,7 @@ export default function PleadingComposer({
                 variant="outlined"
                 size="small"
                 onClick={handleDownload}
-                disabled={readyDoc.status !== "READY"}
+                disabled={readyDoc.status !== "READY" || !readyDoc.outputPath}
               >
                 Download
               </Button>
@@ -275,7 +320,11 @@ export default function PleadingComposer({
             <span>
               {readyDoc.status === "READY"
                 ? "Your document is ready:"
-                : "Your document is being prepared:"}
+                : readyDoc.status === "GENERATING"
+                ? "Your document is being prepared:"
+                : readyDoc.status === "REJECTED"
+                ? "Document generation failed:"
+                : "Status:"}
             </span>
             <strong>{readyDoc.suggestedName}</strong>
             <Chip

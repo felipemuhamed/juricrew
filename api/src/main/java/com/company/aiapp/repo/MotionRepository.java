@@ -1,55 +1,150 @@
 package com.company.aiapp.repo;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 import com.company.aiapp.domain.MotionEntity;
-import com.company.aiapp.dto.LatestDocOnly;
-
-import org.springframework.data.domain.Pageable;
+import com.company.aiapp.repo.projection.LatestDocOnlyView;
+import com.company.aiapp.repo.projection.LatestDocView;
+import com.company.aiapp.repo.projection.MotionHydrateView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 public interface MotionRepository extends JpaRepository<MotionEntity, UUID> {
 
-	@Query("""
-			select new com.company.aiapp.dto.LatestDocOnly(m.id, m.status, m.outputDocxPath)
-			from MotionEntity m
-			join m.caseRef c
-			where lower(c.caseNumber) = lower(:caseNumber)
-			order by m.generatedAt desc nulls last, m.updatedAt desc
-			""")
-	List<LatestDocOnly> findLatestDocOnly(@Param("caseNumber") String caseNumber, Pageable pageable);
+  // ===== HYDRATE (with inputSnapshot / no LOB streaming at runtime) =====
 
-	// latest by owner + caseNumber
-	Optional<MotionEntity> findTopByCreatedByAndCaseRef_CaseNumberOrderByGeneratedAtDesc(UUID createdBy,
-			String caseNumber);
+  @Query("""
+      select m.id as id,
+             m.status as status,
+             m.outputDocxPath as outputDocxPath,
+             m.inputSnapshot as inputSnapshot
+        from MotionEntity m
+       where m.createdBy = :userId
+         and m.caseRef.caseNumber = :caseNumber
+    order by m.generatedAt desc
+    """)
+  Optional<MotionHydrateView> findHydrateByCreatedByAndCase(@Param("userId") UUID userId,
+                                                            @Param("caseNumber") String caseNumber);
 
-	// latest by owner + caseNumber + folder (project)
-	Optional<MotionEntity> findTopByCreatedByAndCaseRef_CaseNumberAndFolderIdOrderByGeneratedAtDesc(UUID createdBy,
-			String caseNumber, UUID folderId);
+  @Query("""
+      select m.id as id,
+             m.status as status,
+             m.outputDocxPath as outputDocxPath,
+             m.inputSnapshot as inputSnapshot
+        from MotionEntity m
+       where m.createdBy = :userId
+         and m.caseRef.caseNumber = :caseNumber
+         and m.folderId = :folderId
+    order by m.generatedAt desc
+    """)
+  Optional<MotionHydrateView> findHydrateByCreatedByAndCaseAndFolder(@Param("userId") UUID userId,
+                                                                     @Param("caseNumber") String caseNumber,
+                                                                     @Param("folderId") UUID folderId);
 
-	// optional orgId variants
-	Optional<MotionEntity> findTopByOrgIdAndCaseRef_CaseNumberOrderByGeneratedAtDesc(UUID orgId, String caseNumber);
+  @Query("""
+      select m.id as id,
+             m.status as status,
+             m.outputDocxPath as outputDocxPath,
+             m.inputSnapshot as inputSnapshot
+        from MotionEntity m
+       where m.caseRef.caseNumber = :caseNumber
+    order by m.generatedAt desc
+    """)
+  Optional<MotionHydrateView> findHydrateByCase(@Param("caseNumber") String caseNumber);
 
-	Optional<MotionEntity> findTopByOrgIdAndCaseRef_CaseNumberAndFolderIdOrderByGeneratedAtDesc(UUID orgId,
-			String caseNumber, UUID folderId);
+  @Query("""
+      select m.id as id,
+             m.status as status,
+             m.outputDocxPath as outputDocxPath,
+             m.inputSnapshot as inputSnapshot
+        from MotionEntity m
+       where m.caseRef.caseNumber = :caseNumber
+         and m.folderId = :folderId
+    order by m.generatedAt desc
+    """)
+  Optional<MotionHydrateView> findHydrateByCaseAndFolder(@Param("caseNumber") String caseNumber,
+                                                         @Param("folderId") UUID folderId);
 
-	// *** Added to satisfy MotionController usage ***
+  // ===== LITE (no LOBs) — used by /docs/latest =====
 
-	// All motions across the system ordered by updatedAt desc
-	List<MotionEntity> findAllByOrderByUpdatedAtDesc();
+  @Query("""
+      select m.id as id,
+             cast(m.status as string) as status,
+             m.outputDocxPath as outputDocxPath
+        from MotionEntity m
+       where m.createdBy = :userId
+         and m.caseRef.caseNumber = :caseNumber
+    order by m.generatedAt desc
+    """)
+  Optional<LatestDocView> findLiteByCreatedByAndCaseOrderByGeneratedAtDesc(@Param("userId") UUID userId,
+                                                                           @Param("caseNumber") String caseNumber);
 
-	// Motions within a specific folder ordered by updatedAt desc
-	List<MotionEntity> findByFolderIdOrderByUpdatedAtDesc(UUID folderId);
+  @Query("""
+      select m.id as id,
+             cast(m.status as string) as status,
+             m.outputDocxPath as outputDocxPath
+        from MotionEntity m
+       where m.createdBy = :userId
+         and m.caseRef.caseNumber = :caseNumber
+         and m.folderId = :folderId
+    order by m.generatedAt desc
+    """)
+  Optional<LatestDocView> findLiteByCreatedByAndCaseAndFolderOrderByGeneratedAtDesc(@Param("userId") UUID userId,
+                                                                                    @Param("caseNumber") String caseNumber,
+                                                                                    @Param("folderId") UUID folderId);
 
-	// (Optional) If you want pagination for either of the above:
-	List<MotionEntity> findAllByOrderByUpdatedAtDesc(Pageable pageable);
+  @Query("""
+      select m.id as id,
+             cast(m.status as string) as status,
+             m.outputDocxPath as outputDocxPath
+        from MotionEntity m
+       where m.caseRef.caseNumber = :caseNumber
+    order by m.generatedAt desc
+    """)
+  Optional<LatestDocView> findLiteByCaseOrderByGeneratedAtDesc(@Param("caseNumber") String caseNumber);
 
-	List<MotionEntity> findByFolderIdOrderByUpdatedAtDesc(UUID folderId, Pageable pageable);
+  @Query("""
+      select m.id as id,
+             cast(m.status as string) as status,
+             m.outputDocxPath as outputDocxPath
+        from MotionEntity m
+       where m.caseRef.caseNumber = :caseNumber
+         and m.folderId = :folderId
+    order by m.generatedAt desc
+    """)
+  Optional<LatestDocView> findLiteByCaseAndFolderOrderByGeneratedAtDesc(@Param("caseNumber") String caseNumber,
+                                                                        @Param("folderId") UUID folderId);
 
-	// (Optional) If you allow "unfiled" motions (no folder):
-	List<MotionEntity> findByFolderIdIsNullOrderByUpdatedAtDesc();
+  // ===== Lists for the “motions” page =====
+
+  /** All motions inside a project (folder), newest first. */
+  @Query("select m from MotionEntity m where m.folderId = :folderId order by m.updatedAt desc")
+  List<MotionEntity> findByFolderOrderByUpdatedDesc(@Param("folderId") UUID folderId);
+
+  /** All motions (any folder or unfiled), newest first. */
+  @Query("select m from MotionEntity m order by m.updatedAt desc")
+  List<MotionEntity> findAllOrderByUpdatedDesc();
+
+  // ===== Native: “latest doc only” compact projection (nullable filters) =====
+
+  @Query(value = """
+		  select
+		    m.id                       as id,
+		    cast(m.status as varchar)  as status,
+		    m.output_docx_path         as outputDocxPath
+		  from motions m
+		  join cases c on c.id = m.case_id
+		  where (:userId  is null or m.created_by = :userId)
+		    and c.case_number = :caseNumber
+		    and (:folderId is null or m.folder_id = :folderId)
+		  order by m.generated_at desc nulls last, m.updated_at desc
+		  limit 1
+		  """, nativeQuery = true)
+		Optional<LatestDocOnlyView> findLatestDocOnlyNative(@Param("userId") UUID userId,
+		                                                    @Param("caseNumber") String caseNumber,
+		                                                    @Param("folderId") UUID folderId);
+
 }

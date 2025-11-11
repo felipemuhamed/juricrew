@@ -29,6 +29,7 @@ import TitleBar from "../components/layout/TitleBar";
 import MessageList from "../components/messages/MessageList";
 import PleadingCard from "../components/pleadings/PleadingCard";
 import PleadingComposer, { PleadingPayload } from "../components/PleadingComposer";
+import { DocRequestDTOHydrate } from "../api";
 
 const pleadingDraftKeyFor = (convId: string) => `pleading_draft_${convId}`;
 
@@ -285,49 +286,53 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
     setPendingTitle(c.title);
     setDraftTitle("");
 
-    // ⬇️ reset the form immediately
+    // reset the form immediately
     setPleadingSeed(undefined);
 
-    // (optional) if you were using local drafts, stop now
+    // stop any local drafts
     setPleadingKey(undefined);
 
-    // (optional) still load messages if you want to keep the history hidden afterward
+    // optionally still load messages (history can be hidden later)
     await loadMessages(c.id);
 
-    // 🔎 NEW: hydrate the pleading form from DB for this conversation + user
+    // helper to map hydrate DTO -> your form seed
+    const toSeed = (dto: DocRequestDTOHydrate | null | undefined) => {
+      if (!dto?.fields) return undefined;
+      const f = dto.fields;
+      return {
+        motionType: f.motion_type ?? "",
+        facts: f.facts ?? "",
+        caseNumber: f.case_number ?? "",
+        court: f.court ?? "",
+        plaintiff: f.plaintiff ?? "",
+        defendants: Array.isArray(f.defendant) ? f.defendant.join("; ") : "",
+      };
+    };
+
     try {
-      const dto = await api.latestDocForConversation(c.id);
+      // 1) Try conversation-scoped hydrate first (tolerates 204/404)
+      let hydrate = await api.latestDocForConversation(c.id);
+      let seed = toSeed(hydrate);
 
-      if (dto?.fields) {
-        const f = dto.fields;
-        const seed = {
-          motionType: f.motion_type ?? "",
-          facts: f.facts ?? "",
-          caseNumber: f.case_number ?? "",
-          court: f.court ?? "",
-          plaintiff: f.plaintiff ?? "",
-          defendants: Array.isArray(f.defendant) ? f.defendant.join("; ") : "",
-        };
-        setPleadingSeed(seed);
-
-        // Optional: retitle conversation to case number from DB
-        if (seed.caseNumber && seed.caseNumber !== c.title) {
-          try { await api.renameConversation(c.id, seed.caseNumber); } catch { }
-          setConvs(arr => arr.map(x => x.id === c.id ? ({ ...x, title: seed.caseNumber }) : x));
-          setCurrent(cur => cur && cur.id === c.id ? ({ ...cur, title: seed.caseNumber }) : cur);
-          setPendingTitle(seed.caseNumber);
+      // 2) Fallback by case number (your titles are case numbers) + project scope
+      if (!seed) {
+        const caseNo = (c.title || "").trim();
+        if (caseNo) {
+          const byCase = await api.latestDocSnapshotByCase(caseNo, c.projectId ?? undefined);
+          seed = toSeed(byCase);
+          if (byCase?.fields?.case_number) {
+            setPendingTitle(byCase.fields.case_number);
+          }
         }
-      } else {
-        // no server seed — empty form
-        setPleadingSeed(undefined);
+      } else if (hydrate?.fields?.case_number) {
+        setPendingTitle(hydrate.fields.case_number);
       }
-    } catch {
-      // if hydrate fails, fall back to empty
+
+      setPleadingSeed(seed);
+    } catch (e) {
+      console.error("hydrate failed", e);
       setPleadingSeed(undefined);
     }
-
-    // ⛔ stop using per-conversation localStorage drafts now that DB is the source of truth
-    setPleadingKey(undefined);
 
     // hide chat bubbles for the pleadings view
     setMessages([]);

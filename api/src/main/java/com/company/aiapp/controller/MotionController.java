@@ -36,13 +36,18 @@ public class MotionController {
   private final MotionRepository motionsRepo;
   private final UserService users;
   private final ProjectService projects;
-  
-  public MotionController(MotionRepository motionsRepo, UserService users, ProjectService projects, MotionService motionsService) {
-	    this.motionsRepo = motionsRepo;
-	    this.users = users;
-	    this.projects = projects;
-	    this.motionsService = motionsService;
-	  }
+
+  public MotionController(
+      MotionRepository motionsRepo,
+      UserService users,
+      ProjectService projects,
+      MotionService motionsService
+  ) {
+    this.motionsRepo = motionsRepo;
+    this.users = users;
+    this.projects = projects;
+    this.motionsService = motionsService;
+  }
 
   @PostMapping
   public ResponseEntity<MotionResponse> create(@RequestBody CreateMotionRequest req,
@@ -50,7 +55,7 @@ public class MotionController {
                                                @RequestHeader("X-User-Id") String userId) {
     return ResponseEntity.ok(motionsService.create(req, userId, orgId));
   }
-  
+
   @GetMapping
   public ResponseEntity<List<MotionResp>> list(
       @AuthenticationPrincipal UserDetails principal,
@@ -62,12 +67,12 @@ public class MotionController {
     if (projectId != null) {
       // validate ownership of folder
       Project p = projects.ownedOrThrow(u, projectId);
-      list = motionsRepo.findByFolderIdOrderByUpdatedAtDesc(p.getId());
+      // ✅ uses native-query helper
+      list = motionsRepo.findByFolderOrderByUpdatedDesc(p.getId());
     } else {
-      // choose either only unfiled:
-      // list = motions.findByFolderIdIsNullOrderByUpdatedAtDesc();
-      // or all:
-      list = motionsRepo.findAllByOrderByUpdatedAtDesc();
+      // ✅ all motions ordered by updatedAt (native-query helper)
+      list = motionsRepo.findAllOrderByUpdatedDesc();
+      // If you ever want “only unfiled” instead, add a native helper and swap here.
     }
 
     var resp = list.stream().map(this::toResp).toList();

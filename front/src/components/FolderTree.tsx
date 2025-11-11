@@ -41,6 +41,11 @@ type Props = {
   onMove: (c: Conv) => void;
   onDelete: (c: Conv) => void;
   onRename: (c: Conv) => void;
+
+  /** ✅ folder actions (handled by parent instead of window events) */
+  onFolderNewSub: (parent: ProjectNode) => void;
+  onFolderRename: (folder: ProjectNode) => void;
+  onFolderDelete: (folder: ProjectNode) => void;
 };
 
 export default function FolderTree({
@@ -55,6 +60,9 @@ export default function FolderTree({
   onMove,
   onDelete,
   onRename,
+  onFolderNewSub,
+  onFolderRename,
+  onFolderDelete,
 }: Props) {
   const renderNode = (node: ProjectNode, depth = 0): ReactNode => {
     const isOpen = !!expanded[node.id];
@@ -76,20 +84,11 @@ export default function FolderTree({
                 </IconButton>
               </Tooltip>
 
-              {/* Folder actions (kebab) */}
+              {/* ✅ Folder actions passed to parent */}
               <FolderMenu
-                onNewSubfolder={() => {
-                  const ev = new CustomEvent("folder-new-sub", { detail: node });
-                  window.dispatchEvent(ev);
-                }}
-                onRename={() => {
-                  const ev = new CustomEvent("folder-rename", { detail: node });
-                  window.dispatchEvent(ev);
-                }}
-                onDelete={() => {
-                  const ev = new CustomEvent("folder-delete", { detail: node });
-                  window.dispatchEvent(ev);
-                }}
+                onNewSubfolder={() => onFolderNewSub(node)}
+                onRename={() => onFolderRename(node)}
+                onDelete={() => onFolderDelete(node)}
               />
             </Box>
           }
