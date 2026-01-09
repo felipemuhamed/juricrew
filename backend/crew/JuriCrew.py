@@ -41,7 +41,7 @@ class JuriCrew:
             config=self.agents_config[agent_config_key],
             tools=tools,
             llm=llm,
-            verbose=True
+            verbose=False
         )
 
     @agent
@@ -51,6 +51,16 @@ class JuriCrew:
     @task
     def draft_pleading(self, llm) -> Task:
         return Task(config=self.tasks_config["draft_pleading"], agent=self.legal_pleadings_agent(llm))
+
+
+    @agent
+    def legal_research_agent_us(self, llm) -> Agent:
+        return self._create_agent("legal_research_agent_us", [rag_search_tool, web_search_tool], llm=llm)
+
+    @task
+    def legal_research_us(self, llm) -> Task:
+        return Task(config=self.tasks_config["legal_research_us"], agent=self.legal_research_agent_us(llm))
+
 
     def sanitize_json(self, raw_string: str) -> str:
         start = raw_string.find('```json')
@@ -147,7 +157,39 @@ class JuriCrew:
     def add_to_rag(self, path):
         rag_search_tool.add(data_type="file", path=path)
 
-    async def create_pledge(self, motion_type, facts, process, court, parts, llm_tokens: dict = None):
+
+    async def create_pledge(self, motion_type, facts, process, court, parts, selected_authorities, firm_template, llm_tokens=None):
+        api_keys = llm_tokens["api_key"].split(",")
+        api_keys = [k.strip() for k in api_keys if k.strip()]
+
+        llm = DeepSeekLLM(
+            model=llm_tokens.get("model"),
+            api_key=api_keys,
+            temperature=0.1,
+            top_p=0.1
+        )
+
+        drafting_inputs = {
+            "motion_type": motion_type,
+            "facts": facts,
+            "process": process,
+            "parts": parts,
+            "court": court,
+            "selected_authorities": selected_authorities,
+            "firm_template": firm_template
+        }
+
+        pledge_crew = Crew(
+            agents=[self.legal_pleadings_agent(llm)],
+            tasks=[self.draft_pleading(llm)],
+            process=Process.sequential,
+            verbose=False
+        )
+
+        result = await pledge_crew.kickoff_async(inputs=drafting_inputs)
+        return result.raw
+
+    async def create_research(self, motion_type, facts, process, court, parts, llm_tokens: dict = None):
         api_keys = llm_tokens["api_key"].split(",")
         api_keys = [k.strip() for k in api_keys if k.strip()]
 
@@ -164,11 +206,13 @@ class JuriCrew:
             "court": court
         }
 
+        # NOTE: aqui roda apenas a task de pesquisa
+        research_crew = Crew(
+            agents=[self.legal_research_agent_us(llm)],
+            tasks=[self.legal_research_us(llm)],
+            process=Process.sequential,
+            verbose=False
+        )
 
-        pledge_crew = Crew(agents=[self.legal_pleadings_agent(llm)], tasks=[self.draft_pleading(llm)],
-                           process=Process.sequential, verbose=True)
-
-        result = await pledge_crew.kickoff_async(inputs=inputs)
-
-
+        result = await research_crew.kickoff_async(inputs=inputs)
         return result.raw

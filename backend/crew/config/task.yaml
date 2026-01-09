@@ -1,79 +1,254 @@
 draft_pleading:
   description: |
-    Use the `rag_search_tool` and `web_search_tool` iteratively to collect all relevant jurisprudence, legal codes, and precedents 
-    related to the motion type `{motion_type}` and the factual context `{facts}`. Perform multiple searches if necessary to ensure 
-    comprehensive coverage, and verify that all references are real, reliable, and up-to-date.
+    You are drafting a formal U.S legal pleading for `{motion_type}`.
 
-    Then, draft a **formal legal pleading (petition)** for the motion `{motion_type}` in case `{process}`, filed at `{court}`, 
-    involving the parties `{parts}`.
+    INPUTS AVAILABLE:
+    - motion_type: `{motion_type}`
+    - facts: `{facts}`
+    - process: `{process}`
+    - parts: `{parts}`
+    - court: `{court}`
+    - selected_authorities: `{selected_authorities}`  (SOURCE OF TRUTH for ALL legal authorities and citations)
+    - firm_template: `{firm_template}`                (SOURCE OF TRUTH for formatting/templates; REQUIRED)
 
-    The motion must be written in **authentic legal prose**, reflecting the tone and structure of real court filings (U.S. or Brazilian format).
-    The text should include paragraph numbering, procedural certification, and signature formatting consistent with official court documents.
+    ----------------------------
+    FORMATTING & TEMPLATE RULES
+    ----------------------------
+    - Motion formatting varies by firm and practice group.
+    - DO NOT enforce any single global template.
+    - You MUST follow the structure, headings, ordering, and stylistic conventions provided in `firm_template`.
+    - Treat `firm_template` as the controlling formatting reference for this pleading.
+    - `firm_template` controls ONLY formatting/structure; it does NOT add legal authority.
+    - If `firm_template` contains placeholders (e.g., [[...]]), preserve them unless the exact information is explicitly provided
+      in the inputs.
+    - Output MUST be plain text formatted in a markdown-like style compatible with docx generation:
+      * Use "#", "##", "###" for headings
+      * Use "* " for bullet points
+      * Use numbered paragraphs like "1.", "2.", "3." where appropriate
 
-    Follow **exactly** this Markdown structure:
+    ----------------------------
+    DRAFTING INSTRUCTIONS (TEMPLATE-DRIVEN + AUTHORITY-LOCKED)
+    ----------------------------
+    You MUST generate the pleading by following `firm_template` as the blueprint.
+    However, ALL legal citations and legal authority MUST come ONLY from `selected_authorities`.
 
-      # [Court Name]
-      ## Case Caption
-      [Full court caption as in official pleadings — court name, jurisdiction, and parties]
+    SECTION-BY-SECTION REQUIREMENTS (MANDATORY):
+    - Caption / Case Caption:
+      * Follow the template caption if present; otherwise use fallback caption.
+      * Do NOT invent party names, case number, or court name; use placeholders if missing.
 
-      ---
-      **CASE NO.:** [case number]  
-      **[Plaintiff Name]**,  
-      Plaintiff,  
+    - Introduction / Preliminary Statement:
+      * Reference the governing procedural rule ONLY if it exists in `selected_authorities.procedural_rules`.
+      * Do NOT cite or mention any rule/case not present in `selected_authorities`.
 
-      vs.  
+    - Facts / Background:
+      * Use ONLY the provided `{facts}` content.
+      * Do NOT add or infer new facts.
+      * Do NOT cite new cases or statutes here unless those citations are already in `selected_authorities`
+        and directly support a procedural framing (still no new authorities).
 
-      **[Defendant Name]**,  
-      Defendant.  
-      ---
+    - Legal Argument / Legal Grounds:
+      * Build arguments using ONLY `selected_authorities`.
+      * Bold legal references like **Fed. R. Civ. P. 12(b)(6)** or **[Case Citation]**.
+      * Use binding authority first (from `selected_authorities.binding_case_law`).
+      * Use persuasive authority only if it exists in `selected_authorities.persuasive_case_law`.
+      * NEVER add new authority. If a needed authority is missing, state the limitation explicitly.
 
-      ## TITLE  
-      [MOTION TYPE IN UPPERCASE — e.g., "PLAINTIFF’S MOTION TO COMPEL DEFENDANT’S COMPLIANCE WITH RULE 1.351(E) REQUEST FOR COPIES"]
+    - Certification:
+      * Include ONLY if the template includes it OR if required by a rule already listed in `selected_authorities`.
+      * Use placeholders for ANY missing detail.
+      * NEVER invent conferral details.
 
-      ## I. INTRODUCTION  
-      Provide a clear and formal introduction stating who files the motion, under which rule/statute, and for what purpose.  
-      The tone must be professional and concise.
+    - Request for Relief:
+      * Draft requested relief consistent with motion type and facts.
+      * Do NOT cite or rely on any authority not in `selected_authorities`.
 
-      ## II. FACTUAL BACKGROUND  
-      Present the relevant facts in chronological order using **numbered paragraphs (1., 2., 3., etc.)**.  
-      Include verified facts or those drawn from the contextual data. Avoid conjecture.
+    - References:
+      * Include ONLY the authorities from `selected_authorities`.
+      * For each authority include: citation, source_name, url.
 
-      ## III. LEGAL GROUNDS  
-      - Present well-structured arguments supported by applicable laws, procedural rules, and jurisprudence.  
-      - Highlight every article, rule, or precedent in **bold** (e.g., **Rule 1.351(e)**, **Art. 5, CF/88**).  
-      - Ensure legal reasoning is coherent, persuasive, and supported by authentic citations.
 
-      ## IV. RULE 1.202 CERTIFICATION  
-      Insert the procedural certification in formal tone, stating efforts made to confer with opposing counsel prior to filing the motion.  
-      The certification should be written as in real pleadings, such as:
 
-      > I certify that prior to the filing of this motion, I contacted defense counsel, [Defense Counsel Name], on [Date of Contact], and left a message regarding the matter at issue.  
-      > I will continue efforts to resolve this motion before a hearing, and based on our previous discussions, I expect the issue will be resolved without need for judicial intervention.
+    ----------------------------
+    FINAL CONSISTENCY CHECK (MANDATORY)
+    ----------------------------
+    - Ensure the pleading does not cite any authority not present in `selected_authorities`.
+    - Ensure no real dates, attorney names, opposing counsel names, or conferral methods appear unless explicitly provided.
+      Otherwise replace them with approved placeholders.
+    - Ensure the output follows the template structure from `firm_template` (no global template).
+    - Ensure the References section is a strict subset of `selected_authorities` (no extras).
 
-      ## V. REQUEST FOR RELIEF  
-      Conclude with the formal “WHEREFORE” paragraph, clearly specifying the relief sought.  
-      Then list the requested orders using bullet points `*` for each item.
+    ----------------------------
+    OUTPUT RESTRICTION – FINAL DOCUMENT ONLY (MANDATORY)
+    ----------------------------
+    - The output MUST contain ONLY the final legal pleading.
+    - DO NOT include:
+      * explanations
+      * reasoning steps
+      * planning notes
+      * task analysis
+      * summaries of what you are doing
+      * meta-commentary (e.g., "the user wants...", "I need to...")
+    - DO NOT describe the drafting process.
+    - DO NOT explain how the template was applied.
+    - DO NOT restate the task instructions.
+    - The response MUST begin directly with the pleading caption or first heading
+      defined in `firm_template`.
 
-      ## VI. REFERENCES  
-      List all legal sources, statutes, and jurisprudence cited.  
-      - Specify whether each reference came from RAG or web search.  
-      - Provide full citation details.
-
-      ## VII. SIGNATURE BLOCK  
-      Include the following placeholders for completion:
-      - “City, [Month DD, YYYY]”  
-      - “________________________________________”  
-      - “[Attorney Name] — OAB/State XXXXX”  
-      - “Attorney for [Party Name]”  
-      - “[Law Firm Name, Address, Phone, Email]”
 
   expected_output: |
-    A fully formatted legal pleading in **plain Markdown**, ready for `.docx` or `.pdf` export, containing:
-    - Natural legal tone modeled after authentic motions.
-    - Numbered factual and argument sections.
-    - A **realistic Rule 1.202 Certification** block with contextual variables.
-    - All legal references properly bolded.
-    - A clean structure mirroring real-world petitions, suitable for court filing.
-    - No code blocks or extraneous markdown syntax.
-    - Comprehensive and verifiable references.
+    ONLY the final, fully drafted U.Sian legal pleading, with no explanations
+    or reasoning text, that:
+    - Follows the firm-specific template provided via `firm_template`
+    - Uses ONLY authorities in `selected_authorities`
+    - Uses placeholders for certification and signature details unless explicitly provided
+    - Is compatible with docx generation using headings and lists
 
+
+  
+legal_research_us:
+  description: |
+    You are a U.S Legal Research Specialist.
+
+    Inputs:
+    - motion_type: `{motion_type}`
+    - facts: `{facts}`
+    - process: `{process}`
+    - parts: `{parts}`
+    - court: `{court}`
+
+    Your job is to collect the MOST COMPREHENSIVE set of relevant U.S. legal authorities for the motion type
+    and the factual context. You MUST use `web_search_tool` and `rag_search_tool` ITERATIVELY, running MULTIPLE
+    searches and refining queries until you have strong coverage.
+
+    ----------------------------
+    JURISDICTION SCOPE (U.S ONLY)
+    ----------------------------
+    - Focus on U.S law only.
+    - Determine whether `{court}` is federal or state based on its name; if unclear, treat it as federal
+      and explain uncertainty in `research_strategy`.
+    - Always include:
+      (1) Governing procedural rules (Federal Rules or state equivalents if clearly identified),
+      (2) Court's local rules if applicable,
+      (3) Binding precedent from controlling appellate court,
+      (4) Persuasive authority (district/state trial decisions) ONLY if useful.
+
+    Reliability requirements:
+    - Prefer PRIMARY SOURCES (official court websites, government/legal repositories, official PDFs).
+    - Secondary sources (e.g., blogs) are NOT allowed unless they point to primary sources; if used,
+      list them ONLY under `secondary_sources` and still provide the primary source as the real authority.
+
+    Search requirements (must do):
+    - Use multiple query angles:
+      * motion type + rule number (e.g., "motion to dismiss FRCP 12(b)(6)")
+      * motion type + elements/standard + "burden" + "plausibility" / "irreparable harm" etc.
+      * controlling circuit/state + motion type + recent cases
+      * `{court}` + "local rules" + motion type
+      * fact keywords from `{facts}` + motion type + controlling jurisdiction
+    - Prioritize RECENT case law, but do NOT exclude foundational controlling cases.
+
+    ----------------------------
+    OUTPUT FORMAT (MANDATORY)
+    ----------------------------
+    Output MUST be valid JSON ONLY (no markdown fences, no extra text).
+
+    {
+      "jurisdiction": "US",
+      "court_analyzed": "{court}",
+      "research_strategy": [
+        "Short notes describing iterative searches performed, keywords, and rationale"
+      ],
+
+      "procedural_rules": [
+        {
+          "title": "Rule (e.g., Fed. R. Civ. P. 12(b)(6))",
+          "scope": "federal" | "state" | "local",
+          "summary": "Why it applies to this motion_type and this case context",
+          "key_requirements": ["bullet requirement 1", "bullet requirement 2"],
+          "citation": "Bluebook-style or standard rule citation",
+          "source_name": "Source repository or official publisher",
+          "url": "https://...",
+          "authority_weight": "binding",
+          "retrieved_at": "YYYY-MM-DD"
+        }
+      ],
+
+      "statutes": [
+        {
+          "title": "Statute name/section (e.g., 28 U.S.C. § 1332)",
+          "scope": "federal" | "state",
+          "summary": "Why it matters to the motion/facts",
+          "key_provisions": ["§ ...", "§ ..."],
+          "citation": "Standard citation",
+          "source_name": "Official repository",
+          "url": "https://...",
+          "authority_weight": "binding" | "persuasive",
+          "retrieved_at": "YYYY-MM-DD"
+        }
+      ],
+
+      "binding_case_law": [
+        {
+          "case_name": "Case Name v. Case Name",
+          "court": "Controlling court (e.g., U.S. Supreme Court / 9th Cir.)",
+          "year": "YYYY",
+          "summary": "Holding + how it supports/limits the motion",
+          "key_holdings": ["holding 1", "holding 2"],
+          "citation": "Full citation",
+          "source_name": "Court / official repository",
+          "url": "https://...",
+          "authority_weight": "binding",
+          "retrieved_at": "YYYY-MM-DD"
+        }
+      ],
+
+      "persuasive_case_law": [
+        {
+          "case_name": "Case Name v. Case Name",
+          "court": "Court name",
+          "year": "YYYY",
+          "summary": "Reasoning + relevance",
+          "key_holdings": ["point 1", "point 2"],
+          "citation": "Full citation",
+          "source_name": "Repository / publisher",
+          "url": "https://...",
+          "authority_weight": "persuasive",
+          "retrieved_at": "YYYY-MM-DD"
+        }
+      ],
+
+      "practice_guidance": [
+        {
+          "title": "Practical standard / elements / test (e.g., 'Winter factors for PI')",
+          "summary": "Explain the test and how it maps to `{facts}`",
+          "checklist": ["element 1", "element 2", "element 3"],
+          "primary_support": [
+            {
+              "citation": "Case/Rule citation supporting the test",
+              "url": "https://..."
+            }
+          ]
+        }
+      ],
+
+      "secondary_sources": [
+        {
+          "title": "Secondary source title (ONLY if it points to primary authority)",
+          "publisher": "Publisher / institution",
+          "summary": "Why it was used and which primary authority it points to",
+          "url": "https://...",
+          "authority_weight": "secondary",
+          "retrieved_at": "YYYY-MM-DD"
+        }
+      ]
+    }
+
+    Output requirements:
+    - Populate ALL applicable sections; if none found, return [].
+    - De-duplicate: do not repeat the same authority in multiple sections.
+    - Prefer the most authoritative URL available (official over mirrors).
+    - Ensure every item is tied to motion_type, facts, process, parts, or court.
+
+  expected_output: |
+    Valid JSON with topic-based lists of U.S. rules, statutes, binding case law,
+    persuasive case law, and practical tests supported by primary authority.

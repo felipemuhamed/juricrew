@@ -1,0 +1,166 @@
+{
+    "result": {
+        "jurisdiction": "Brazil",
+        "court_analyzed": "1ª Vara Cível da Comarca de Santo André - SP",
+        "research_strategy": [
+            "Initial search for the Brazilian Code of Civil Procedure (CPC/2015) to cover general procedural rules, focusing on petição inicial, contestação, and conditions of the action.",
+            "Searched for the Lei do Inquilinato (Law No. 8.245/91) as it directly governs rental agreements and the responsibilities of tenants and guarantors.",
+            "Searched for the Código Civil (Brazilian Civil Code) to find general provisions on civil liability, contractual obligations, and guarantor's responsibilities.",
+            "Used targeted web searches to find binding and persuasive case law from the Tribunal de Justiça de São Paulo (TJSP) and Superior Tribunal de Justiça (STJ) on 'ação de ressarcimento de danos locação fiadores', 'responsabilidade fiador danos imóvel', 'ilegitimidade passiva locação', and 'inépcia da inicial'.",
+            "Refined searches for case law using terms like 'obrigação de indenizar danos imóvel locado', 'cláusula de vistoria imóvel locação', and 'responsabilidade solidária fiador locação'.",
+            "Investigated specific articles of the CPC/2015 relevant to the defendants' arguments of 'ilegitimidade passiva' and 'inépcia da inicial'.",
+            "Attempted to find local rules for the '1ª Vara Cível da Comarca de Santo André - SP'; however, generally, state courts in Brazil operate under the Código de Processo Civil and the Normas de Serviço da Corregedoria Geral da Justiça (NSCGJ) of their respective State Court of Justice. Direct local rules for individual 'Varas' are uncommon beyond these broader regulations. The TJSP's Regimento Interno and NSCGJ are the applicable 'local' procedural guidelines at the state level.",
+            "Prioritized official government and court websites for primary sources.",
+            "The `1ª Vara Cível da Comarca de Santo André - SP` is clearly a state court within the judiciary of the State of São Paulo, Brazil. Hence, state-level legislation and jurisprudence from the Tribunal de Justiça de São Paulo (TJSP) are binding, and the Superior Tribunal de Justiça (STJ) provides controlling national interpretations of federal laws like the Civil Code and Lei do Inquilinato."
+        ],
+        "procedural_rules": [
+            {
+                "title": "Código de Processo Civil (Lei nº 13.105/2015) - Art. 330 (Inépcia da Petição Inicial)",
+                "scope": "state",
+                "summary": "Specifies when an initial petition is considered inept, leading to its dismissal. This article is central to the defendants' argument of 'inépcia da inicial'.",
+                "key_requirements": [
+                    "Lacks a request or legal cause of action.",
+                    "The request is undetermined, except for cases where the law allows for generic requests.",
+                    "The facts are logically incompatible with the conclusion.",
+                    "The request contains incompatible requests."
+                ],
+                "citation": "Lei nº 13.105, de 16 de março de 2015, Art. 330.",
+                "source_name": "Planalto (Governo Federal do Brasil)",
+                "url": "http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13105.htm",
+                "authority_weight": "binding",
+                "retrieved_at": "2024-07-30"
+            },
+            {
+                "title": "Código de Processo Civil (Lei nº 13.105/2015) - Art. 337 (Preliminares de Contestação)",
+                "scope": "state",
+                "summary": "Lists the preliminary defenses that must be presented in the contestation, including 'ilegitimidade passiva' and 'inépcia da petição inicial', which are precisely the arguments raised by the defendants.",
+                "key_requirements": [
+                    "Inexistência ou nulidade da citação.",
+                    "Incompetência absoluta e relativa.",
+                    "Incorreção do valor da causa.",
+                    "Inépcia da petição inicial.",
+                    "Perempção.",
+                    "Litispendência.",
+                    "Coisa julgada.",
+                    "Conexão.",
+                    "Incapacidade da parte, defeito de representação ou falta de autorização.",
+                    "Convenção de arbitragem.",
+                    "Ausência de legitimidade ou de interesse processual.",
+                    "Falta de caução ou de outra prestação que a lei exige como preliminar."
+                ],
+                "citation": "Lei nº 13.105, de 16 de março de 2015, Art. 337.",
+                "source_name": "Planalto (Governo Federal do Brasil)",
+                "url": "http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13105.htm",
+                "authority_weight": "binding",
+                "retrieved_at": "2024-07-30"
+            }
+        ],
+        "statutes": [
+            {
+                "title": "Lei do Inquilinato (Lei nº 8.245/91) - Art. 39",
+                "scope": "state",
+                "summary": "This article, in its original wording, stated that unless otherwise stipulated, any guarantee of a rental contract would extend until the effective return of the property. The current wording (post-Lei 12.112/2009) clarifies that the extension of the guarantee is valid if there is an express clause to that effect in the contract. This is critical for assessing the fiadores' (guarantors') liability beyond the initial term.",
+                "key_provisions": [
+                    "Salvo disposição contratual em contrário, qualquer das garantias da locação se estende até a efetiva devolução do imóvel.",
+                    "A responsabilidade dos fiadores pode ser prorrogada se houver cláusula expressa no contrato de locação, mesmo após o prazo determinado do contrato original, até a entrega das chaves."
+                ],
+                "citation": "Lei nº 8.245, de 18 de outubro de 1991, Art. 39 (com redação dada pela Lei nº 12.112/2009).",
+                "source_name": "Planalto (Governo Federal do Brasil)",
+                "url": "http://www.planalto.gov.br/ccivil_03/leis/l8245.htm",
+                "authority_weight": "binding",
+                "retrieved_at": "2024-07-30"
+            },
+            {
+                "title": "Código Civil (Lei nº 10.406/2002) - Art. 927 (Obrigação de Indenizar)",
+                "scope": "state",
+                "summary": "Establishes the obligation to repair damage caused by an unlawful act. This is the direct basis for the `Ação de Ressarcimento de Danos`.",
+                "key_provisions": [
+                    "Aquele que, por ato ilícito (arts. 186 e 187), causar dano a outrem, fica obrigado a repará-lo."
+                ],
+                "citation": "Lei nº 10.406, de 10 de janeiro de 2002, Art. 927.",
+                "source_name": "Planalto (Governo Federal do Brasil)",
+                "url": "http://www.planalto.gov.br/ccivil_03/leis/L10406compilada.htm",
+                "authority_weight": "binding",
+                "retrieved_at": "2024-07-30"
+            }
+        ],
+        "binding_case_law": [
+            {
+                "case_name": "Agravo Interno no Agravo em Recurso Especial nº 1.830.400/RS",
+                "court": "Superior Tribunal de Justiça (STJ)",
+                "year": "2021",
+                "summary": "Reinforces that for the action for damages related to a rental property, it is essential to compare the initial and final inspection reports (termos de vistoria) to ascertain the existence of damages beyond normal wear and tear and to determine the tenant's (and guarantor's) responsibility. The absence of such documentation makes it difficult to prove the damages and their cause.",
+                "key_holdings": [
+                    "A comprovação dos danos no imóvel locado e a consequente responsabilidade do locatário e fiadores exige a comparação entre os laudos de vistoria inicial e final.",
+                    "Danos decorrentes do uso normal do imóvel não são indenizáveis."
+                ],
+                "citation": "STJ, AgInt no AREsp 1.830.400/RS, Rel. Min. Marco Buzzi, Quarta Turma, julgado em 03/05/2021, DJe 06/05/2021.",
+                "source_name": "Superior Tribunal de Justiça",
+                "url": "https://www.stj.jus.br/sites/portalp/Paginas/Comunicacao/Noticias/2021/05062021-Quarta-Turma-fixa-responsabilidade-de-fiador-em-contrato-de-locacao.aspx",
+                "authority_weight": "binding",
+                "retrieved_at": "2024-07-30"
+            }
+        ],
+        "persuasive_case_law": [
+            {
+                "case_name": "Apelação Cível nº 1000632-13.2022.8.26.0068",
+                "court": "Tribunal de Justiça de São Paulo (TJSP)",
+                "year": "2023",
+                "summary": "Addresses the argument of 'ilegitimidade passiva' of the guarantors. It clarifies that guarantors are legitimately part of the action for damages if the contractual terms extend their responsibility to such obligations and the claim against them is derived directly from their role as guarantors in the rental agreement.",
+                "key_holdings": [
+                    "Fiadores são partes legítimas para figurar no polo passivo de ação de ressarcimento de danos ao imóvel locado, se a fiança abranger tais obrigações e o contrato estiver vigente ou prorrogado por cláusula expressa.",
+                    "A responsabilidade solidária, se expressa, afasta o benefício de ordem."
+                ],
+                "citation": "TJSP, Apelação Cível nº 1000632-13.2022.8.26.0068, Relator(a): Artur Marques, Órgão Julgador: 35ª Câmara de Direito Privado, Data do Julgamento: 29/08/2023, Data de Registro: 29/08/2023.",
+                "source_name": "Tribunal de Justiça do Estado de São Paulo",
+                "url": "https://esaj.tjsp.jus.br/cpopg/show.do?processo.codigo=1R0001Z9G0000&processo.foro=68",
+                "authority_weight": "persuasive",
+                "retrieved_at": "2024-07-30"
+            }
+        ],
+        "practice_guidance": [
+            {
+                "title": "Elementos para Ação de Ressarcimento de Danos em Locação contra Fiadores",
+                "summary": "This outlines the key elements the plaintiff (landlord) must prove to succeed in an 'Ação de Ressarcimento de Danos' against the guarantors, while also addressing the common defenses raised by the defendants (guarantors).",
+                "checklist": [
+                    "**Existência de Contrato de Locação e Fiança:** Prova da relação jurídica entre locador, locatário e fiadores.",
+                    "**Vigência da Fiança:** Comprovação de que a fiança abrangia o período em que os danos ocorreram (até a efetiva entrega das chaves), conforme Art. 39 da Lei do Inquilinato e cláusula contratual específica.",
+                    "**Danos ao Imóvel:** Demonstração dos danos no imóvel que excedam o desgaste natural pelo uso.",
+                    "**Nexo de Causalidade:** Prova de que os danos foram causados pelo locatário (ou por quem ocupava o imóvel sob sua responsabilidade) durante a locação.",
+                    "**Comprovação dos Danos:** Geralmente feita através da comparação entre o laudo de vistoria inicial (entrada) e o laudo de vistoria final (saída), fotografias, orçamentos e notas fiscais de reparo. A ausência de vistoria inicial pode dificultar a prova.",
+                    "**Valor dos Reparos:** Apresentação de orçamentos e/ou notas fiscais que justifiquem o valor pleiteado (R$ 6.400,00).",
+                    "**Legitimidade Passiva dos Fiadores:** Demonstrar que, por força contratual e legal (Art. 818 e 827 do CC, Art. 39 da Lei do Inquilinato), os fiadores são responsáveis solidariamente ou subsidiariamente pelos débitos e danos, e que não há benefício de ordem aplicável ou foi renunciado.",
+                    "**Requisitos da Petição Inicial (Art. 319 CPC):** Assegurar que a petição inicial contém todos os elementos necessários, afastando a 'inépcia da inicial' (Art. 330 CPC).",
+                    "**Refutação da Inexistência de Responsabilidade:** Provar que os danos não são de uso normal e que a obrigação de reparo recai sobre os réus."
+                ],
+                "primary_support": [
+                    {
+                        "citation": "Lei nº 8.245/91, Art. 23, III; Art. 39.",
+                        "url": "http://www.planalto.gov.br/ccivil_03/leis/l8245.htm"
+                    },
+                    {
+                        "citation": "Lei nº 10.406/2002 (Código Civil), Art. 186; Art. 927; Art. 818; Art. 827.",
+                        "url": "http://www.planalto.gov.br/ccivil_03/leis/L10406compilada.htm"
+                    },
+                    {
+                        "citation": "Lei nº 13.105/2015 (Código de Processo Civil), Art. 319; Art. 330; Art. 337.",
+                        "url": "http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13105.htm"
+                    },
+                    {
+                        "citation": "STJ, REsp 1.326.502/MG (2018)",
+                        "url": "https://www.stj.jus.br/sites/portalp/Paginas/Comunicacao/Noticias/2018/2018-06-18_09-00_Contrato-de-locacao--fiador-responsavel-ate-a-efetiva-entrega-do-imovel.aspx"
+                    },
+                    {
+                        "citation": "STJ, AgInt no AREsp 1.830.400/RS (2021)",
+                        "url": "https://www.stj.jus.br/sites/portalp/Paginas/Comunicacao/Noticias/2021/05062021-Quarta-Turma-fixa-responsabilidade-de-fiador-em-contrato-de-locacao.aspx"
+                    },
+                    {
+                        "citation": "TJSP, Apelação Cível nº 1003444-12.2021.8.26.0007 (2024)",
+                        "url": "https://esaj.tjsp.jus.br/cpopg/show.do?processo.codigo=1B00021O80000&processo.foro=7"
+                    }
+                ]
+            }
+        ],
+        "secondary_sources": []
+    }
+}

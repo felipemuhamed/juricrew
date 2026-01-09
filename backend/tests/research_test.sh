@@ -1,6 +1,6 @@
 #!/bin/bash
 
-curl -X POST "http://localhost:5000/generate-pleading/docx" \
+curl -X POST "http://localhost:5000/research" \
      -H "Content-Type: application/json" \
      -d '{
            "motion_type": "Ação de Ressarcimento de Danos",
@@ -10,8 +10,7 @@ curl -X POST "http://localhost:5000/generate-pleading/docx" \
             "parts": 
                "author: Elisangela Iris dos Reis Magalhães; defendants: [Edivaldo Alves de Lima, Odete Maria dos Santos]",
            "llm_tokens": {
-               "api_key": "AIzaSyA_mTK57hkER7aZ8LsgsgkNDJCPzxUQk0A, AIzaSyBSbTllQZF4SBCZDHYyJcjHXMlKFPQB_OE",
+               "api_key": "AIzaSyAfKFuCYZtw3yrss9KJtnIfUeKnZ0Bl59w",
                "model": "gemini/gemini-2.5-flash"
            }
-         }' \
-     --output pleading_XXXXX-51.2024.8.26.0554.docx
+         }' | jq
