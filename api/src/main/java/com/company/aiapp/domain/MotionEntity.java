@@ -22,7 +22,8 @@ import org.hibernate.type.SqlTypes;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "motions", indexes = { @Index(name = "ix_motions_case", columnList = "case_id"),
-		@Index(name = "ix_motions_folder", columnList = "folderId") })
+		@Index(name = "ix_motions_folder", columnList = "folderId"),
+		@Index(name = "ix_motions_conversation", columnList = "conversationId") })
 public class MotionEntity {
 
 	@Id
@@ -72,6 +73,19 @@ public class MotionEntity {
 	private String outputPdfPath;
 	@Lob
 	private String generationLog;
+
+	/** Links this motion draft/output to a UI Conversation (sidebar item). */
+	private UUID conversationId;
+
+	/** Step-1 authority research results (so returning to the conversation restores the list). */
+	@Column(name = "researched_authorities", columnDefinition = "text")
+	@JdbcTypeCode(SqlTypes.JSON)
+	private JsonNode researchedAuthorities;
+
+	/** Output document metadata (bucket/key/fileName/etc). */
+	@Column(name = "output_metadata", columnDefinition = "text")
+	@JdbcTypeCode(SqlTypes.JSON)
+	private JsonNode outputMetadata;
 
 	private UUID orgId;
 	private UUID folderId;

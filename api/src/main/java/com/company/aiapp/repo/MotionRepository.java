@@ -14,6 +14,12 @@ import java.util.UUID;
 
 public interface MotionRepository extends JpaRepository<MotionEntity, UUID> {
 
+  // ===== Conversation-scoped hydrate =====
+
+  Optional<MotionEntity> findTop1ByConversationIdAndCreatedByOrderByUpdatedAtDesc(UUID conversationId, UUID createdBy);
+
+  Optional<MotionEntity> findTop1ByConversationIdOrderByUpdatedAtDesc(UUID conversationId);
+
   // ===== HYDRATE (with inputSnapshot / no LOB streaming at runtime) =====
 
   @Query("""

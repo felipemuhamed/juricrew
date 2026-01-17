@@ -1,3 +1,4 @@
+// src/pages/ChatPage.tsx
 import {
   Box,
   CircularProgress,
@@ -32,6 +33,12 @@ import PleadingComposer, { PleadingPayload } from "../components/PleadingCompose
 import { DocRequestDTOHydrate } from "../api";
 
 const pleadingDraftKeyFor = (convId: string) => `pleading_draft_${convId}`;
+
+// Optional environment-driven default project id (MUST match PleadingComposer)
+const DEFAULT_PROJECT_ID =
+  (import.meta as any)?.env?.VITE_PROJECT_ID ||
+  (window as any)?.__PROJECT_ID__ ||
+  "juricrew-demo";
 
 function parsePleadingSummary(text: string): null | {
   motionType: string; facts: string; caseNumber: string; court: string;
@@ -75,6 +82,7 @@ const genId = (): string => {
   const c: Crypto | undefined = typeof crypto !== "undefined" ? crypto : undefined;
   // @ts-ignore
   if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  // @ts-ignore
   if (c && typeof c.getRandomValues === "function") {
     return ([1e7] as any + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
@@ -149,6 +157,12 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
   const [pleadingSeed, setPleadingSeed] = useState<{
     motionType?: string; facts?: string; caseNumber?: string; court?: string;
     plaintiff?: string; defendants?: string;
+    templateId?: string;
+    selectedAuthorities?: any;
+    researchedAuthorities?: any;
+    motionId?: string;
+    status?: any;
+    outputPath?: string;
   } | undefined>(undefined);
 
   const [pleadingKey, setPleadingKey] = useState<string | undefined>(undefined);
@@ -256,7 +270,6 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
     setConvs(list);
 
     if (current && list.find((c) => c.id === current.id)) {
-      // keep selection; optionally refresh its messages if you want
       await loadMessages(current.id);
       return;
     }
@@ -273,6 +286,40 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
     const msgs = await api.listMessages(convId);
     setMessages(dedupeAdjacentByRoleAndContent(msgs));
     if (autoScroll) requestAnimationFrame(() => endAnchorRef.current?.scrollIntoView({ block: "end" }));
+  };
+
+  // ---- FIX #1: Hydration must work for NEW conversations (unfiled) ----
+  // The backend saves docs under an "effective projectId" used during generation.
+  // PleadingComposer uses DEFAULT_PROJECT_ID when projectId is null/undefined.
+  // So when a conversation is unfiled (projectId null), we MUST pass DEFAULT_PROJECT_ID
+  // when doing "latest snapshot by case" lookups, or hydration will fail.
+  const effectiveProjectIdForConv = (c: Conv): string | undefined => {
+    return (c.projectId ?? undefined) || DEFAULT_PROJECT_ID;
+  };
+
+  // ---- FIX #2: tolerate multiple hydrate response shapes (LatestDocResp vs DocRequestDTOHydrate) ----
+  const extractFields = (dto: any) => {
+    if (!dto) return null;
+    return dto.fields ?? dto.docRequestDTO?.fields ?? dto.snapshot?.fields ?? null;
+  };
+
+  const toSeed = (dto: any) => {
+    const f = extractFields(dto);
+    if (!f) return undefined;
+    return {
+      motionType: f.motion_type ?? "",
+      facts: f.facts ?? "",
+      caseNumber: f.case_number ?? "",
+      court: f.court ?? "",
+      plaintiff: f.plaintiff ?? "",
+      defendants: Array.isArray(f.defendant) ? f.defendant.join("; ") : "",
+      templateId: dto?.templateId ?? undefined,
+      selectedAuthorities: dto?.selectedAuthorities ?? undefined,
+      researchedAuthorities: dto?.researchedAuthorities ?? undefined,
+      motionId: dto?.motionId ?? undefined,
+      status: dto?.status ?? undefined,
+      outputPath: dto?.outputPath ?? undefined,
+    };
   };
 
   const handleSelectConv = async (c: Conv) => {
@@ -295,37 +342,28 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
     // optionally still load messages (history can be hidden later)
     await loadMessages(c.id);
 
-    // helper to map hydrate DTO -> your form seed
-    const toSeed = (dto: DocRequestDTOHydrate | null | undefined) => {
-      if (!dto?.fields) return undefined;
-      const f = dto.fields;
-      return {
-        motionType: f.motion_type ?? "",
-        facts: f.facts ?? "",
-        caseNumber: f.case_number ?? "",
-        court: f.court ?? "",
-        plaintiff: f.plaintiff ?? "",
-        defendants: Array.isArray(f.defendant) ? f.defendant.join("; ") : "",
-      };
-    };
-
     try {
       // 1) Try conversation-scoped hydrate first (tolerates 204/404)
-      let hydrate = await api.latestDocForConversation(c.id);
+      const hydrate = await api.latestDocSnapshotForConversation(c.id);
       let seed = toSeed(hydrate);
 
-      // 2) Fallback by case number (your titles are case numbers) + project scope
+      const hydrateFields = extractFields(hydrate);
+      if (hydrateFields?.case_number) {
+        setPendingTitle(hydrateFields.case_number);
+      }
+
+      // 2) Fallback by case number (conversation titles are usually case numbers)
       if (!seed) {
         const caseNo = (c.title || "").trim();
         if (caseNo) {
-          const byCase = await api.latestDocSnapshotByCase(caseNo, c.projectId ?? undefined);
+          const byCase = await api.latestDocSnapshotByCase(caseNo, effectiveProjectIdForConv(c));
           seed = toSeed(byCase);
-          if (byCase?.fields?.case_number) {
-            setPendingTitle(byCase.fields.case_number);
+
+          const byCaseFields = extractFields(byCase);
+          if (byCaseFields?.case_number) {
+            setPendingTitle(byCaseFields.case_number);
           }
         }
-      } else if (hydrate?.fields?.case_number) {
-        setPendingTitle(hydrate.fields.case_number);
       }
 
       setPleadingSeed(seed);
@@ -544,35 +582,38 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
   };
   const cancelTitle = () => { setPendingTitle(current?.title || ""); setTitleEditing(false); };
 
-  // Pleading submit handler shared by both center card and sticky composer
+  // ---- NEW: Pleading submit hook should create/refresh sidebar convs, not re-process doc ----
   const handlePleadingSubmit = async (payload: PleadingPayload) => {
     try {
-      setLoading(true);
+      // This runs AFTER PleadingComposer already generated the doc.
+      const caseNo = (payload.process || "").trim();
 
-      // Process and download only — no conversation/message saving.
-      const result = await api.processDoc({
-        motion_type: payload.motion_type,
-        facts: payload.facts,
-        process: payload.process,
-        court: payload.court,
-        parts: payload.parts,
-      });
+      let target = current;
 
-      const blob = await api.downloadDoc(result.outputPath);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const safeCaseNumber = (payload.process || "").replace(/[^a-zA-Z0-9._-]+/g, "_");
-      a.href = url;
-      a.download = `pleading_${safeCaseNumber || "document"}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      // If no conversation selected, create an UNFILED one (projectId=null)
+      if (!target) {
+        const title = caseNo || defaultTitle();
+        target = await api.createConversation(title, null);
+        setCurrent(target);
+      }
+
+      // If we have a case number, use it as the conversation title
+      if (caseNo && target.title !== caseNo) {
+        await api.renameConversation(target.id, caseNo);
+        setConvs((arr) => arr.map((c) => (c.id === target!.id ? { ...c, title: caseNo } : c)));
+        setCurrent((c) => (c && c.id === target!.id ? ({ ...c, title: caseNo } as Conv) : c));
+        setPendingTitle(caseNo);
+        setDraftTitle(caseNo);
+      }
+
+      // Refresh sidebar list so it appears (unfiled) and selection stays consistent
+      await refreshConvs();
+
+      // Select it so hydration/banner works on click later
+      await handleSelectConv(target);
     } catch (err) {
       console.error(err);
-      alert("Failed to process/download pleading.");
-    } finally {
-      setLoading(false);
+      // Don't block user download; this is sidebar bookkeeping
     }
   };
 
@@ -701,6 +742,7 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
                   onCaseNumberChange={handleCaseNumberChange}
                   initialValues={pleadingSeed}
                   projectId={current?.projectId ?? null}
+                  conversationId={current?.id ?? null}
                 />
               </PleadingCard>
             </Box>
@@ -730,6 +772,7 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
                     onSubmit={handlePleadingSubmit}
                     initialValues={pleadingSeed}             // keep it consistent
                     projectId={current?.projectId ?? null}
+                    conversationId={current?.id ?? null}
                   />
                 </PleadingCard>
               </Box>

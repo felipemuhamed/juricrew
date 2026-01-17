@@ -3,6 +3,9 @@ package com.company.aiapp.dto;
 import java.time.LocalDate;
 import java.util.List;
 
+import lombok.Data;
+
+@Data
 public class CreateMotionRequest {
   public String motionType;
   public String facts;

@@ -14,8 +14,7 @@ spring:
   servlet:
     multipart:
       max-file-size: 64MB
-      max-request-size: 64MB
-        
+      max-request-size: 64MB        
         
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -35,7 +34,7 @@ spring:
         lob:
           non_contextual_creation: true
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
 
 app:
@@ -59,6 +58,7 @@ app:
     processor:
       baseUrl: ${APP_EXTERNAL_PROCESSOR_BASEURL}
       processPath: ${APP_EXTERNAL_PROCESSOR_PROCESSPATH}
+      researchPath: ${APP_EXTERNAL_PROCESSOR_RESEARCHPATH:/research}
       api-token: ${API_TOKEN}
       model: ${LLM_MODEL}   
     

@@ -4,12 +4,20 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DocRequestDTO {
+
+  /** Conversation ID (sidebar item) this motion belongs to. */
+  private String conversationId;
+
+  /** Existing motion ID (draft/output) to update instead of creating a new record. */
+  private String motionId;
 
   /** Project the motion should live under (conversation’s project). */
   private String projectId;
@@ -23,6 +31,15 @@ public class DocRequestDTO {
   /** Required set of domain fields for the motion. */
   @NotNull
   private Fields fields;
+
+  /** Step 2: selected template (required for generation; optional for research). */
+  private String templateId;
+
+  /** Step 2: frozen authorities chosen by the user. */
+  private JsonNode selectedAuthorities;
+
+  /** Step 1: authority research results (so the UI can restore without re-running research). */
+  private JsonNode researchedAuthorities;
 
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -55,9 +72,6 @@ public class DocRequestDTO {
      * Kept so the controller can parse it into the canonical fields.
      */
     private String parts;
-
-    /** Legacy “process” (case number) retained via @JsonAlias on case_number. */
-    // private String process; // not needed; alias applied on case_number
 
     // Convenience accessors for alias handling in controller normalization
     public List<String> getDefendants() { return defendant; } // alias view

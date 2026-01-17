@@ -8,6 +8,7 @@ import com.company.aiapp.config.storage.FileStorage;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -80,6 +81,16 @@ public class S3FileStorage implements FileStorage {
             return true;
         } catch (S3Exception e) {
             return false;
+        }
+    }
+
+    @Override
+    public void delete(Path relativePath) throws IOException {
+        String key = toKey(relativePath);
+        try {
+            s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+        } catch (S3Exception e) {
+            throw new IOException("Failed to delete s3://" + bucket + "/" + key, e);
         }
     }
 
@@ -165,6 +176,8 @@ public class S3FileStorage implements FileStorage {
             return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         if (key.endsWith(".json"))
             return "application/json";
+        if (key.endsWith(".md"))
+            return "text/markdown; charset=utf-8";
         return "application/octet-stream";
     }
 }

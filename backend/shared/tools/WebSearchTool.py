@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 from typing import Optional, Type, Any, List
 from ddgs import DDGS
 import time
+import os
 
 class WebSearchToolInput(BaseModel):
     query: str = Field(..., description="Search query or keywords to find relevant information on the web.")
@@ -21,9 +22,12 @@ class WebSearchTool(BaseTool):
     _client: Any = PrivateAttr()
     _default_timeout: int = PrivateAttr()
     _default_retries: int = PrivateAttr()
+    _backend: str = PrivateAttr()
 
     def __init__(self, default_timeout: int = 10, default_retries: int = 2):
         super().__init__()
+        # Force a stable backend to avoid ddgs 'auto' engines like grokipedia/yandex that can crash parsing
+        self._backend = os.getenv('DDGS_TEXT_BACKEND', 'duckduckgo')  # avoid 'auto' engines like grokipedia
         self._client = DDGS(timeout=default_timeout)
         self._default_timeout = default_timeout
         self._default_retries = default_retries
@@ -38,7 +42,7 @@ class WebSearchTool(BaseTool):
         while attempt <= retries:
             try:
                 with self._client as ddgs:
-                    search_results = ddgs.text(query, max_results=max_results, region=region)
+                    search_results = ddgs.text(query, max_results=max_results, region=region, backend=self._backend)
                     for res in search_results:
                         if isinstance(res, dict):
                             results.append({

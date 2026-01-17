@@ -8,6 +8,8 @@ export default function PleadingCard({ children }: PropsWithChildren) {
       sx={{
         width: "100%",
         maxWidth: 820,
+        boxSizing: "border-box",
+        overflow: "hidden",
         borderRadius: 3,
         px: 1.5,
         py: 1.1,
@@ -20,6 +22,7 @@ export default function PleadingCard({ children }: PropsWithChildren) {
           }`,
         boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
         backgroundClip: "padding-box",
+        "& *": { boxSizing: "border-box" },
       }}
     >
       {children}
