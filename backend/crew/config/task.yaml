@@ -67,6 +67,31 @@ draft_pleading:
       * Include ONLY the authorities from `selected_authorities`.
       * For each authority include: citation, source_name, url.
 
+    ----------------------------
+    COURT-READY MINIMUM COMPONENTS (MANDATORY)
+    ----------------------------
+    Your output MUST be a court-ready motion package (single document) that includes, in a professionally
+    standard order, the following components UNLESS the `firm_template` explicitly instructs otherwise:
+
+    1) Caption / Case Caption
+    2) Title of document
+    3) Notice of Motion and Motion (use placeholders like [[HEARING DATE]], [[TIME]], [[DEPT]] if not provided)
+    4) Memorandum of Points and Authorities
+    5) Declaration re: Meet and Confer (use placeholders; do not invent details)
+    6) CRC 3.1345 Separate Statement (if required/selected; if your system generates it elsewhere, include a
+       clearly labeled placeholder section stating it will be filed/attached separately)
+    7) Proposed Order (optional unless template requires; include a short proposed order section)
+    8) Proof of Service (use placeholders)
+    9) Signature block
+
+    If any of the above components are missing from `firm_template`, you MUST still include them using
+    conservative, widely accepted formatting (clear headings and placeholders).
+
+    IMPORTANT: All legal authority remains authority-locked:
+    - You MUST cite ONLY authorities found in `selected_authorities`.
+    - You MUST cite EACH selected authority at least once in the body OR in a "Authorities Relied Upon" subheading.
+    - You MUST NOT add any new cases/rules/statutes. If you feel additional authority would help, omit it.
+
 
 
     ----------------------------

@@ -44,23 +44,33 @@ type BuilderSection = {
   enabled?: boolean;
 };
 
-type SignatureFields = {
-  attorneyName: boolean;
-  lawFirm: boolean;
-  barNumber: boolean;
-  address: boolean;
-  phone: boolean;
-  email: boolean;
+type SignatureTextField = {
+  enabled: boolean;
+  text: string;
+};
+
+type SignatureMultiField = {
+  enabled: boolean;
+  items: string[];
+};
+
+type SignatureConfig = {
+  attorneyName: SignatureTextField;
+  lawFirm: SignatureTextField;
+  barNumber: SignatureTextField;
+  address: SignatureMultiField;
+  phone: SignatureMultiField;
+  email: SignatureTextField;
 };
 
 type TemplateBuilderState = {
-  version: 1;
+  version: 2;
   language: Language;
   includeCaptionBlock: boolean;
   includeReferences: boolean;
   includeSignature: boolean;
   sections: BuilderSection[];
-  signatureFields: SignatureFields;
+  signature: SignatureConfig;
 };
 
 function uid() {
@@ -105,21 +115,80 @@ function defaultSections(language: Language): BuilderSection[] {
 
 function defaultBuilder(language: Language): TemplateBuilderState {
   return {
-    version: 1,
+    version: 2,
     language,
     includeCaptionBlock: true,
     includeReferences: true,
     includeSignature: true,
     sections: defaultSections(language),
-    signatureFields: {
-      attorneyName: true,
-      lawFirm: true,
-      barNumber: true,
-      address: true,
-      phone: true,
-      email: true,
+    signature: {
+      attorneyName: { enabled: true, text: "" },
+      lawFirm: { enabled: true, text: "" },
+      barNumber: { enabled: true, text: "" },
+      address: { enabled: true, items: [""] },
+      phone: { enabled: true, items: [""] },
+      email: { enabled: true, text: "" },
     },
   };
+}
+
+function coerceBuilderJson(b: any, fallbackLanguage: Language = "pt"): TemplateBuilderState {
+  // Handles older saved templates (version 1) and ensures all required fields exist.
+  if (b && typeof b === "object") {
+    if (b.version === 2) {
+      const base = defaultBuilder((b.language as Language) ?? fallbackLanguage);
+      return {
+        ...base,
+        ...b,
+        sections: Array.isArray(b.sections) ? b.sections : base.sections,
+        signature: {
+          ...base.signature,
+          ...(b.signature ?? {}),
+          address: {
+            ...base.signature.address,
+            ...(b.signature?.address ?? {}),
+            items:
+              Array.isArray(b.signature?.address?.items) && b.signature.address.items.length
+                ? b.signature.address.items
+                : base.signature.address.items,
+          },
+          phone: {
+            ...base.signature.phone,
+            ...(b.signature?.phone ?? {}),
+            items:
+              Array.isArray(b.signature?.phone?.items) && b.signature.phone.items.length
+                ? b.signature.phone.items
+                : base.signature.phone.items,
+          },
+        },
+      } as TemplateBuilderState;
+    }
+
+    if (b.version === 1) {
+      const lang = (b.language as Language) ?? fallbackLanguage;
+      const base = defaultBuilder(lang);
+      const sf = b.signatureFields ?? {};
+
+      return {
+        ...base,
+        language: lang,
+        includeCaptionBlock: b.includeCaptionBlock ?? base.includeCaptionBlock,
+        includeReferences: b.includeReferences ?? base.includeReferences,
+        includeSignature: b.includeSignature ?? base.includeSignature,
+        sections: Array.isArray(b.sections) ? b.sections : base.sections,
+        signature: {
+          attorneyName: { enabled: !!sf.attorneyName, text: "" },
+          lawFirm: { enabled: !!sf.lawFirm, text: "" },
+          barNumber: { enabled: !!sf.barNumber, text: "" },
+          address: { enabled: !!sf.address, items: !!sf.address ? [""] : [] },
+          phone: { enabled: !!sf.phone, items: !!sf.phone ? [""] : [] },
+          email: { enabled: !!sf.email, text: "" },
+        },
+      };
+    }
+  }
+
+  return defaultBuilder(fallbackLanguage);
 }
 
 function buildMarkdown(builder: TemplateBuilderState): string {
@@ -161,15 +230,38 @@ function buildMarkdown(builder: TemplateBuilderState): string {
   if (builder.includeSignature) {
     lines.push(`### ${builder.language === "pt" ? "ASSINATURA" : "SIGNATURE"}`, ``);
 
-    const sig: string[] = [];
-    if (builder.signatureFields.attorneyName) sig.push(`[[ATTORNEY NAME]]  `);
-    if (builder.signatureFields.lawFirm) sig.push(`[[LAW FIRM]]  `);
-    if (builder.signatureFields.barNumber) sig.push(`[[BAR NUMBER]]  `);
-    if (builder.signatureFields.address) sig.push(`[[ADDRESS]]  `);
-    if (builder.signatureFields.phone) sig.push(`[[PHONE]]  `);
-    if (builder.signatureFields.email) sig.push(`[[EMAIL]]`);
+    const sigLines: string[] = [];
 
-    lines.push(...sig, ``);
+    const pushText = (enabled: boolean, text: string, placeholder: string) => {
+      if (!enabled) return;
+      const t = (text ?? "").trim();
+      sigLines.push(t.length ? t : placeholder);
+    };
+
+    const pushMulti = (enabled: boolean, items: string[], placeholder: string) => {
+      if (!enabled) return;
+      const vals = (items ?? []).map((v) => (v ?? "").trim()).filter(Boolean);
+      if (!vals.length) {
+        sigLines.push(placeholder);
+        return;
+      }
+      sigLines.push(...vals);
+    };
+
+    pushText(builder.signature.attorneyName.enabled, builder.signature.attorneyName.text, "[[ATTORNEY NAME]]");
+    pushText(builder.signature.lawFirm.enabled, builder.signature.lawFirm.text, "[[LAW FIRM]]");
+    pushText(builder.signature.barNumber.enabled, builder.signature.barNumber.text, "[[BAR NUMBER]]");
+    pushMulti(builder.signature.address.enabled, builder.signature.address.items, "[[ADDRESS]]");
+    pushMulti(builder.signature.phone.enabled, builder.signature.phone.items, "[[PHONE]]");
+    pushText(builder.signature.email.enabled, builder.signature.email.text, "[[EMAIL]]");
+
+    for (let i = 0; i < sigLines.length; i++) {
+      const line = sigLines[i];
+      // Use markdown hard line-breaks (two spaces) for all but the last line.
+      lines.push(i === sigLines.length - 1 ? line : `${line}  `);
+    }
+
+    lines.push(``);
   }
 
   return lines.join("\n").trim() + "\n";
@@ -207,9 +299,7 @@ export default function TemplateDialog({
   const [markdown, setMarkdown] = useState(initial.markdown);
 
   const [builder, setBuilder] = useState<TemplateBuilderState>(() => {
-    const b = initial.builderJson;
-    if (b && typeof b === "object" && (b as any).version === 1) return b as TemplateBuilderState;
-    return defaultBuilder("pt");
+    return coerceBuilderJson(initial.builderJson, "pt");
   });
 
   useEffect(() => {
@@ -220,11 +310,7 @@ export default function TemplateDialog({
     setMarkdown(initial.markdown);
 
     const b = initial.builderJson;
-    if (b && typeof b === "object" && (b as any).version === 1) {
-      setBuilder(b as TemplateBuilderState);
-    } else {
-      setBuilder(defaultBuilder("pt"));
-    }
+    setBuilder(coerceBuilderJson(b, "pt"));
 
     setTab("builder");
   }, [open, initial]);
@@ -280,7 +366,7 @@ export default function TemplateDialog({
   const setLanguage = (lang: Language) => {
     setBuilder((prev) => {
       const next = defaultBuilder(lang);
-      next.signatureFields = prev.signatureFields ?? next.signatureFields;
+      next.signature = prev.signature ?? next.signature;
       next.includeCaptionBlock = prev.includeCaptionBlock;
       next.includeReferences = prev.includeReferences;
       next.includeSignature = prev.includeSignature;
@@ -412,36 +498,339 @@ export default function TemplateDialog({
                           </Box>
 
                           <Grid container spacing={1}>
-                            {(
-                              [
-                                ["attorneyName", "Attorney name", "The signing attorney’s name."],
-                                ["lawFirm", "Law firm", "The firm name on the signature block."],
-                                ["barNumber", "Bar number", "Attorney bar number if required."],
-                                ["address", "Address", "Mailing address for the firm/attorney."],
-                                ["phone", "Phone", "Office phone number."],
-                                ["email", "Email", "Attorney email address."],
-                              ] as Array<[keyof SignatureFields, string, string]>
-                            ).map(([k, label, tip]) => (
-                              <Grid item xs={12} sm={6} key={k}>
-                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                  <FormControlLabel
-                                    control={
-                                      <Switch
-                                        checked={!!builder.signatureFields?.[k]}
-                                        onChange={(e) =>
-                                          setBuilder((p) => ({
-                                            ...p,
-                                            signatureFields: { ...p.signatureFields, [k]: e.target.checked },
-                                          }))
-                                        }
-                                      />
+                            <Grid item xs={12} sm={6}>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={!!builder.signature.attorneyName.enabled}
+                                      onChange={(e) =>
+                                        setBuilder((p) => ({
+                                          ...p,
+                                          signature: {
+                                            ...p.signature,
+                                            attorneyName: { ...p.signature.attorneyName, enabled: e.target.checked, text: p.signature.attorneyName.text ?? "" },
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  }
+                                  label="Attorney name"
+                                />
+                                <Tip text="The signing attorney’s name." />
+                              </Box>
+                              {builder.signature.attorneyName.enabled ? (
+                                <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
+                                  <TextField
+                                    size="small"
+                                    fullWidth
+                                    placeholder="e.g., Jane Q. Attorney"
+                                    value={builder.signature.attorneyName.text}
+                                    onChange={(e) =>
+                                      setBuilder((p) => ({
+                                        ...p,
+                                        signature: {
+                                          ...p.signature,
+                                          attorneyName: { ...p.signature.attorneyName, text: e.target.value },
+                                        },
+                                      }))
                                     }
-                                    label={label}
                                   />
-                                  <Tip text={tip} />
                                 </Box>
-                              </Grid>
-                            ))}
+                              ) : null}
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={!!builder.signature.lawFirm.enabled}
+                                      onChange={(e) =>
+                                        setBuilder((p) => ({
+                                          ...p,
+                                          signature: {
+                                            ...p.signature,
+                                            lawFirm: { ...p.signature.lawFirm, enabled: e.target.checked, text: p.signature.lawFirm.text ?? "" },
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  }
+                                  label="Law firm"
+                                />
+                                <Tip text="The firm name on the signature block." />
+                              </Box>
+                              {builder.signature.lawFirm.enabled ? (
+                                <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
+                                  <TextField
+                                    size="small"
+                                    fullWidth
+                                    placeholder="e.g., Smith & Partners, PLLC"
+                                    value={builder.signature.lawFirm.text}
+                                    onChange={(e) =>
+                                      setBuilder((p) => ({
+                                        ...p,
+                                        signature: {
+                                          ...p.signature,
+                                          lawFirm: { ...p.signature.lawFirm, text: e.target.value },
+                                        },
+                                      }))
+                                    }
+                                  />
+                                </Box>
+                              ) : null}
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={!!builder.signature.barNumber.enabled}
+                                      onChange={(e) =>
+                                        setBuilder((p) => ({
+                                          ...p,
+                                          signature: {
+                                            ...p.signature,
+                                            barNumber: { ...p.signature.barNumber, enabled: e.target.checked, text: p.signature.barNumber.text ?? "" },
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  }
+                                  label="Bar number"
+                                />
+                                <Tip text="Attorney bar number if required." />
+                              </Box>
+                              {builder.signature.barNumber.enabled ? (
+                                <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
+                                  <TextField
+                                    size="small"
+                                    fullWidth
+                                    placeholder="e.g., FL Bar No. 123456"
+                                    value={builder.signature.barNumber.text}
+                                    onChange={(e) =>
+                                      setBuilder((p) => ({
+                                        ...p,
+                                        signature: {
+                                          ...p.signature,
+                                          barNumber: { ...p.signature.barNumber, text: e.target.value },
+                                        },
+                                      }))
+                                    }
+                                  />
+                                </Box>
+                              ) : null}
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={!!builder.signature.email.enabled}
+                                      onChange={(e) =>
+                                        setBuilder((p) => ({
+                                          ...p,
+                                          signature: {
+                                            ...p.signature,
+                                            email: { ...p.signature.email, enabled: e.target.checked, text: p.signature.email.text ?? "" },
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  }
+                                  label="Email"
+                                />
+                                <Tip text="Attorney email address." />
+                              </Box>
+                              {builder.signature.email.enabled ? (
+                                <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
+                                  <TextField
+                                    size="small"
+                                    fullWidth
+                                    placeholder="e.g., attorney@lawfirm.com"
+                                    value={builder.signature.email.text}
+                                    onChange={(e) =>
+                                      setBuilder((p) => ({
+                                        ...p,
+                                        signature: {
+                                          ...p.signature,
+                                          email: { ...p.signature.email, text: e.target.value },
+                                        },
+                                      }))
+                                    }
+                                  />
+                                </Box>
+                              ) : null}
+                            </Grid>
+
+                            <Grid item xs={12}>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={!!builder.signature.address.enabled}
+                                      onChange={(e) =>
+                                        setBuilder((p) => ({
+                                          ...p,
+                                          signature: {
+                                            ...p.signature,
+                                            address: {
+                                              ...p.signature.address,
+                                              enabled: e.target.checked,
+                                              items:
+                                                e.target.checked && (!p.signature.address.items || p.signature.address.items.length === 0)
+                                                  ? [""]
+                                                  : p.signature.address.items ?? [],
+                                            },
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  }
+                                  label="Address"
+                                />
+                                <Tip text="Mailing address for the firm/attorney (multiple lines allowed)." />
+                              </Box>
+                              {builder.signature.address.enabled ? (
+                                <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
+                                  <Stack spacing={1}>
+                                    {(builder.signature.address.items ?? [""]).map((val, idx) => (
+                                      <Box key={`addr-${idx}`} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <TextField
+                                          size="small"
+                                          fullWidth
+                                          placeholder={idx === 0 ? "Address line 1" : `Address line ${idx + 1}`}
+                                          value={val}
+                                          onChange={(e) =>
+                                            setBuilder((p) => {
+                                              const items = [...(p.signature.address.items ?? [""])];
+                                              items[idx] = e.target.value;
+                                              return { ...p, signature: { ...p.signature, address: { ...p.signature.address, items } } };
+                                            })
+                                          }
+                                        />
+                                        <Button
+                                          size="small"
+                                          color="error"
+                                          disabled={(builder.signature.address.items?.length ?? 1) <= 1}
+                                          onClick={() =>
+                                            setBuilder((p) => {
+                                              const items = [...(p.signature.address.items ?? [""])];
+                                              if (items.length <= 1) return p;
+                                              items.splice(idx, 1);
+                                              return { ...p, signature: { ...p.signature, address: { ...p.signature.address, items } } };
+                                            })
+                                          }
+                                        >
+                                          Remove
+                                        </Button>
+                                      </Box>
+                                    ))}
+
+                                    <Box>
+                                      <Button
+                                        size="small"
+                                        onClick={() =>
+                                          setBuilder((p) => {
+                                            const items = [...(p.signature.address.items ?? [""])];
+                                            items.push("");
+                                            return { ...p, signature: { ...p.signature, address: { ...p.signature.address, items } } };
+                                          })
+                                        }
+                                      >
+                                        Add address line
+                                      </Button>
+                                    </Box>
+                                  </Stack>
+                                </Box>
+                              ) : null}
+                            </Grid>
+
+                            <Grid item xs={12}>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={!!builder.signature.phone.enabled}
+                                      onChange={(e) =>
+                                        setBuilder((p) => ({
+                                          ...p,
+                                          signature: {
+                                            ...p.signature,
+                                            phone: {
+                                              ...p.signature.phone,
+                                              enabled: e.target.checked,
+                                              items:
+                                                e.target.checked && (!p.signature.phone.items || p.signature.phone.items.length === 0)
+                                                  ? [""]
+                                                  : p.signature.phone.items ?? [],
+                                            },
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  }
+                                  label="Phone"
+                                />
+                                <Tip text="Office phone number(s) (multiple numbers allowed)." />
+                              </Box>
+                              {builder.signature.phone.enabled ? (
+                                <Box sx={{ pl: 4, pr: 1, pb: 1 }}>
+                                  <Stack spacing={1}>
+                                    {(builder.signature.phone.items ?? [""]).map((val, idx) => (
+                                      <Box key={`phone-${idx}`} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <TextField
+                                          size="small"
+                                          fullWidth
+                                          placeholder={idx === 0 ? "Phone number 1" : `Phone number ${idx + 1}`}
+                                          value={val}
+                                          onChange={(e) =>
+                                            setBuilder((p) => {
+                                              const items = [...(p.signature.phone.items ?? [""])];
+                                              items[idx] = e.target.value;
+                                              return { ...p, signature: { ...p.signature, phone: { ...p.signature.phone, items } } };
+                                            })
+                                          }
+                                        />
+                                        <Button
+                                          size="small"
+                                          color="error"
+                                          disabled={(builder.signature.phone.items?.length ?? 1) <= 1}
+                                          onClick={() =>
+                                            setBuilder((p) => {
+                                              const items = [...(p.signature.phone.items ?? [""])];
+                                              if (items.length <= 1) return p;
+                                              items.splice(idx, 1);
+                                              return { ...p, signature: { ...p.signature, phone: { ...p.signature.phone, items } } };
+                                            })
+                                          }
+                                        >
+                                          Remove
+                                        </Button>
+                                      </Box>
+                                    ))}
+
+                                    <Box>
+                                      <Button
+                                        size="small"
+                                        onClick={() =>
+                                          setBuilder((p) => {
+                                            const items = [...(p.signature.phone.items ?? [""])];
+                                            items.push("");
+                                            return { ...p, signature: { ...p.signature, phone: { ...p.signature.phone, items } } };
+                                          })
+                                        }
+                                      >
+                                        Add phone number
+                                      </Button>
+                                    </Box>
+                                  </Stack>
+                                </Box>
+                              ) : null}
+                            </Grid>
                           </Grid>
                         </Box>
                       ) : null}
