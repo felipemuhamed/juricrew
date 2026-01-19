@@ -96,6 +96,41 @@ const AUTH_GROUPS: Array<{ key: string; label: string }> = [
   { key: "persuasive_case_law", label: "Persuasive case law" },
 ];
 
+// Mock authority results used ONLY during the guided tour.
+// This makes Step 2 feel like a real "searched" experience without calling the backend.
+const TOUR_MOCK_AUTHORITIES: any = {
+  procedural_rules: [
+    {
+      title: "Rule 1.350 — Production of Documents and Things and Entry Upon Land for Inspection and Other Purposes",
+      citation: "Fla. R. Civ. P. 1.350",
+    },
+    {
+      title: "Rule 1.380 — Failure to Make Discovery; Sanctions",
+      citation: "Fla. R. Civ. P. 1.380",
+    },
+  ],
+  statutes: [
+    {
+      title: "Duty to produce documents responsive to discovery requests (illustrative)",
+      citation: "Fla. Stat. § 57.105 (example only)",
+    },
+  ],
+  binding_case_law: [
+    {
+      title: "Langston v. Langston",
+      case_name: "Langston v. Langston",
+      citation: "625 So. 2d 910 (Fla. 1993)",
+    },
+  ],
+  persuasive_case_law: [
+    {
+      title: "Persuasive authority example",
+      case_name: "Smith v. ABC Logistics, Inc.",
+      citation: "(citation placeholder — for demo only)",
+    },
+  ],
+};
+
 function authorityLabel(a: any): string {
   return (
     a?.title ||
@@ -220,6 +255,43 @@ export default function PleadingComposer({
 
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [researchError, setResearchError] = useState<string>("");
+
+  // --- Guided Tour helpers (mocked Step 2 + global reset) ---
+  useEffect(() => {
+    const onMockAuthorities = () => {
+      // Populate authorities with mock data and move user to Step 2.
+      setResearchError("");
+      setAuthorities(TOUR_MOCK_AUTHORITIES);
+      setSelectedIndex({});
+      setStep(2);
+    };
+
+    const onResetHome = () => {
+      // Close any dialogs and reset the composer to its initial state.
+      setTplDialogOpen(false);
+      setTplEditingDetail(null);
+      setTplDialogMode("create");
+      setMotionType("");
+      setFacts("");
+      setCaseNumber("");
+      setCourt("");
+      setPlaintiff("");
+      setDefendants("");
+      setTemplateId("");
+      setAuthorities(null);
+      setSelectedIndex({});
+      setReadyDoc(null);
+      setMotionId("");
+      setStep(1);
+    };
+
+    window.addEventListener("juricrew:tour:loadMockAuthorities", onMockAuthorities as any);
+    window.addEventListener("juricrew:tour:resetHome", onResetHome as any);
+    return () => {
+      window.removeEventListener("juricrew:tour:loadMockAuthorities", onMockAuthorities as any);
+      window.removeEventListener("juricrew:tour:resetHome", onResetHome as any);
+    };
+  }, []);
 
   const refreshTemplates = useCallback(async () => {
     setTemplatesLoading(true);
@@ -669,6 +741,7 @@ export default function PleadingComposer({
       {readyDoc && readyDoc.status !== "DRAFT" && (
         <Alert
           severity={statusColor[readyDoc.status]}
+          data-tour="download-banner"
           action={
             <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: "center" }}>
               <Button
@@ -729,37 +802,43 @@ export default function PleadingComposer({
             Step 1: Motion details
           </Typography>
 
-          <TextField
-            label="Motion type"
-            value={motionType}
-            onChange={(e) => setMotionType(e.target.value)}
-            disabled={disabled}
-            placeholder="e.g., Motion to Compel Discovery"
-            fullWidth
-          />
+          <Box data-tour="motion-type">
+            <TextField
+              label="Motion type"
+              value={motionType}
+              onChange={(e) => setMotionType(e.target.value)}
+              disabled={disabled}
+              placeholder="e.g., Motion to Compel Discovery"
+              fullWidth
+            />
+          </Box>
 
-          <TextField
-            label="Facts"
-            value={facts}
-            onChange={(e) => setFacts(e.target.value)}
-            disabled={disabled}
-            multiline
-            minRows={6}
-            placeholder="Describe the relevant facts..."
-            fullWidth
-          />
+          <Box data-tour="facts">
+            <TextField
+              label="Facts"
+              value={facts}
+              onChange={(e) => setFacts(e.target.value)}
+              disabled={disabled}
+              multiline
+              minRows={6}
+              placeholder="Describe the relevant facts..."
+              fullWidth
+            />
+          </Box>
 
-          <TextField
-            label="Case number"
-            value={caseNumber}
-            onChange={(e) => {
-              setCaseNumber(e.target.value);
-              onCaseNumberChange?.(e.target.value);
-            }}
-            disabled={disabled}
-            placeholder="e.g., 2025-CA-004389"
-            fullWidth
-          />
+          <Box data-tour="case-number">
+            <TextField
+              label="Case number"
+              value={caseNumber}
+              onChange={(e) => {
+                setCaseNumber(e.target.value);
+                onCaseNumberChange?.(e.target.value);
+              }}
+              disabled={disabled}
+              placeholder="e.g., 2025-CA-004389"
+              fullWidth
+            />
+          </Box>
 
           <TextField
             label="Court"
@@ -802,6 +881,7 @@ export default function PleadingComposer({
               onClick={handleResearch}
               disabled={disabled || researching || !baseValid}
               startIcon={researching ? <CircularProgress size={16} /> : undefined}
+              data-tour="btn-find-authorities"
             >
               Find authorities
             </Button>
@@ -813,6 +893,7 @@ export default function PleadingComposer({
                 void persistDraft({ templateId: null, selectedAuthorities: null } as any);
               }}
               disabled={disabled || !baseValid}
+              data-tour="btn-skip-to-template"
             >
               Skip (go to template)
             </Button>
@@ -839,19 +920,20 @@ export default function PleadingComposer({
 
           <Stack spacing={1}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
-              <FormControl fullWidth>
-                <InputLabel id="tpl-select-label">Template</InputLabel>
-                <Select
-                  labelId="tpl-select-label"
-                  label="Template"
-                  value={templateId}
-                  onChange={(e) => setTemplateId(String(e.target.value))}
-                  disabled={disabled || templatesLoading}
-                  onOpen={() => {
-                    // Refresh when user opens dropdown (fixes “created in navbar but not here”)
-                    if (!templatesLoading) refreshTemplates();
-                  }}
-                >
+              <Box data-tour="template-select" sx={{ flex: 1 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="tpl-select-label">Template</InputLabel>
+                  <Select
+                    labelId="tpl-select-label"
+                    label="Template"
+                    value={templateId}
+                    onChange={(e) => setTemplateId(String(e.target.value))}
+                    disabled={disabled || templatesLoading}
+                    onOpen={() => {
+                      // Refresh when user opens dropdown (fixes “created in navbar but not here”)
+                      if (!templatesLoading) refreshTemplates();
+                    }}
+                  >
                   {templatesLoading ? (
                     <MenuItem value="" disabled>
                       Loading...
@@ -867,10 +949,17 @@ export default function PleadingComposer({
                       </MenuItem>
                     ))
                   )}
-                </Select>
-              </FormControl>
+                  </Select>
+                </FormControl>
+              </Box>
 
-              <Button variant="outlined" onClick={openCreateTemplate} startIcon={<AddOutlinedIcon />} disabled={disabled}>
+              <Button
+                variant="outlined"
+                onClick={openCreateTemplate}
+                startIcon={<AddOutlinedIcon />}
+                disabled={disabled}
+                data-tour="btn-create-template"
+              >
                 Create
               </Button>
 
@@ -892,62 +981,73 @@ export default function PleadingComposer({
 
             <Divider sx={{ my: 1 }} />
 
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-              Authorities
-            </Typography>
-
-            {!authorities ? (
-              <Typography variant="body2" color="text.secondary">
-                No authorities loaded yet. Click "Find authorities" in Step 1, or generate without selecting any.
+            <Box data-tour="authorities-section">
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Authorities
               </Typography>
-            ) : (
-              <Stack spacing={2}>
-                {AUTH_GROUPS.map((g) => {
-                  const arr = Array.isArray((authorities as any)[g.key]) ? (authorities as any)[g.key] : [];
-                  if (!arr.length) return null;
-                  return (
-                    <Box key={g.key} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 1.25 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                        {g.label}
-                      </Typography>
-                      <Stack spacing={0.5}>
-                        {arr.map((a: any, idx: number) => {
-                          const checked = (selectedIndex[g.key] ?? []).includes(idx);
-                          return (
-                            <Button
-                              key={`${g.key}-${idx}`}
-                              onClick={() => toggleAuthority(g.key, idx)}
-                              variant={checked ? "contained" : "outlined"}
-                              size="small"
-                              fullWidth
-                              sx={{
-                                justifyContent: "flex-start",
-                                textTransform: "none",
-                                alignItems: "flex-start",
-                                textAlign: "left",
-                                whiteSpace: "normal",
-                                maxWidth: "100%",
-                                minWidth: 0,
-                                "& .MuiButton-startIcon": { marginTop: 0.25 },
-                              }}
-                            >
-                              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0, width: "100%" }}>
-                                <span>{authorityLabel(a)}</span>
-                                {a?.citation ? (
-                                  <Typography variant="caption" color="text.secondary" sx={{ textAlign: "left" }}>
-                                    {a.citation}
-                                  </Typography>
-                                ) : null}
-                              </Box>
-                            </Button>
-                          );
-                        })}
-                      </Stack>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            )}
+
+              {!authorities ? (
+                <Typography variant="body2" color="text.secondary">
+                  No authorities loaded yet. Click "Find authorities" in Step 1, or generate without selecting any.
+                </Typography>
+              ) : (
+                <Stack spacing={2}>
+                  {AUTH_GROUPS.map((g) => {
+                    const arr = Array.isArray((authorities as any)[g.key]) ? (authorities as any)[g.key] : [];
+                    if (!arr.length) return null;
+                    return (
+                      <Box key={g.key} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 1.25 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                          {g.label}
+                        </Typography>
+                        <Stack spacing={0.5}>
+                          {arr.map((a: any, idx: number) => {
+                            const checked = (selectedIndex[g.key] ?? []).includes(idx);
+                            return (
+                              <Button
+                                key={`${g.key}-${idx}`}
+                                data-tour={g.key === "procedural_rules" && idx === 0 ? "authority-item-0" : undefined}
+                                onClick={() => toggleAuthority(g.key, idx)}
+                                variant={checked ? "contained" : "outlined"}
+                                size="small"
+                                fullWidth
+                                sx={{
+                                  justifyContent: "flex-start",
+                                  textTransform: "none",
+                                  alignItems: "flex-start",
+                                  textAlign: "left",
+                                  whiteSpace: "normal",
+                                  maxWidth: "100%",
+                                  minWidth: 0,
+                                  "& .MuiButton-startIcon": { marginTop: 0.25 },
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "flex-start",
+                                    minWidth: 0,
+                                    width: "100%",
+                                  }}
+                                >
+                                  <span>{authorityLabel(a)}</span>
+                                  {a?.citation ? (
+                                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: "left" }}>
+                                      {a.citation}
+                                    </Typography>
+                                  ) : null}
+                                </Box>
+                              </Button>
+                            );
+                          })}
+                        </Stack>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              )}
+            </Box>
 
             <Divider sx={{ my: 1 }} />
 
@@ -957,6 +1057,7 @@ export default function PleadingComposer({
                 onClick={handleSubmit}
                 disabled={disabled || submitting || !step2Valid}
                 startIcon={submitting ? <CircularProgress size={16} /> : undefined}
+                data-tour="btn-generate-motion"
               >
                 Generate motion
               </Button>

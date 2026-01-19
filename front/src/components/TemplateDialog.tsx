@@ -22,7 +22,9 @@ import {
   Typography,
 } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import { useEffect, useMemo, useState } from "react";
+import { useTour } from "../tour/TourProvider";
 import Markdown from "./Markdown";
 
 export type TemplateDialogValue = {
@@ -294,6 +296,8 @@ export default function TemplateDialog({
 
   const [tab, setTab] = useState<"builder" | "markdown">("builder");
 
+  const { startTemplateBuilderTour } = useTour();
+
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description ?? "");
   const [markdown, setMarkdown] = useState(initial.markdown);
@@ -376,7 +380,21 @@ export default function TemplateDialog({
 
   return (
     <Dialog open={open} onClose={isSaving ? undefined : onCancel} maxWidth="lg" fullWidth>
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+          <Box data-tour="template-dialog-title">{title}</Box>
+          <Tooltip title="Template builder tour">
+            <IconButton
+              size="small"
+              onClick={() => startTemplateBuilderTour()}
+              data-tour="template-tour-start"
+              aria-label="template builder tour"
+            >
+              <HelpOutlineOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </DialogTitle>
 
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -392,6 +410,7 @@ export default function TemplateDialog({
               onChange={(e) => setName(e.target.value)}
               fullWidth
               required
+              inputProps={{ "data-tour": "tpl-name" }}
               placeholder="e.g., Motion to Compel – Florida"
             />
           </Box>
@@ -407,6 +426,7 @@ export default function TemplateDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               fullWidth
+              inputProps={{ "data-tour": "tpl-description" }}
               placeholder="e.g., Use in FL Circuit Court for discovery disputes."
             />
           </Box>
@@ -428,7 +448,7 @@ export default function TemplateDialog({
                           <Tip text="Choose how your motion template is structured. We'll generate the final template automatically." size="medium" />
                         </Box>
 
-                        <Button variant="contained" onClick={handleGenerateMarkdown} disabled={isSaving}>
+                        <Button variant="contained" onClick={handleGenerateMarkdown} disabled={isSaving} data-tour="tpl-generate-markdown">
                           Generate Markdown
                         </Button>
                       </Box>
@@ -441,7 +461,7 @@ export default function TemplateDialog({
                           <Tip text="Pick the language your team uses. This sets default section titles." />
                         </Box>
 
-                        <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <FormControl size="small" sx={{ minWidth: 180 }} data-tour="tpl-language">
                           <Select value={builder.language} onChange={(e) => setLanguage(e.target.value as Language)}>
                             <MenuItem value="pt">Português</MenuItem>
                             <MenuItem value="en">English</MenuItem>
@@ -449,7 +469,7 @@ export default function TemplateDialog({
                         </FormControl>
                       </Box>
 
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }} data-tour="tpl-include-caption">
                         <FormControlLabel
                           control={
                             <Switch
@@ -462,7 +482,7 @@ export default function TemplateDialog({
                         <Tip text="Adds Court name, Case number, and party caption at the top." />
                       </Box>
 
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }} data-tour="tpl-include-references">
                         <FormControlLabel
                           control={
                             <Switch
@@ -475,7 +495,7 @@ export default function TemplateDialog({
                         <Tip text="Adds a References section where selected authorities can be listed or cited." />
                       </Box>
 
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }} data-tour="tpl-include-signature">
                         <FormControlLabel
                           control={
                             <Switch
@@ -729,8 +749,7 @@ export default function TemplateDialog({
                                         </Button>
                                       </Box>
                                     ))}
-
-                                    <Box>
+                                    <Box data-tour="tpl-add-address-line">
                                       <Button
                                         size="small"
                                         onClick={() =>
@@ -813,7 +832,7 @@ export default function TemplateDialog({
                                       </Box>
                                     ))}
 
-                                    <Box>
+                                    <Box data-tour="tpl-add-phone-number">
                                       <Button
                                         size="small"
                                         onClick={() =>
@@ -906,7 +925,7 @@ export default function TemplateDialog({
                                   Type
                                 </Typography>
                                 <Tip text="Choose how the section content is structured: paragraph, numbered list, or bullets." />
-                                <FormControl size="small" sx={{ minWidth: 180 }}>
+                                <FormControl size="small" sx={{ minWidth: 180 }} data-tour="tpl-language">
                                   <Select
                                     value={s.kind}
                                     onChange={(e) => updateSection(s.id, { kind: e.target.value as SectionKind })}

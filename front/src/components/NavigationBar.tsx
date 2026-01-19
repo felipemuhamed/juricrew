@@ -18,15 +18,18 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import { useEffect, useRef, useState } from "react";
 
 import { useColorMode } from "../theme/ColorModeProvider";
 import { api, TemplateDetail, TemplateSummary } from "../api";
 import TemplateDialog, { TemplateDialogValue } from "./TemplateDialog";
 import ConfirmDialog from "./ConfirmDialog";
+import { useTour } from "../tour/TourProvider";
 
 export default function NavigationBar() {
   const { mode, toggle } = useColorMode();
+  const { startMotionCreationTour } = useTour();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // ---- RAG Upload (kept: icon only) ----
@@ -220,8 +223,23 @@ export default function NavigationBar() {
                 onClick={openTemplatesMenu}
                 aria-label="templates"
                 data-testid="nav-templates"
+                data-tour="nav-templates"
               >
                 <DescriptionOutlinedIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          {/* Guided tour */}
+          <Tooltip title="Take a tour">
+            <span>
+              <IconButton
+                color="inherit"
+                onClick={startMotionCreationTour}
+                aria-label="tour"
+                data-tour="nav-tour"
+              >
+                <HelpOutlineOutlinedIcon />
               </IconButton>
             </span>
           </Tooltip>
@@ -297,7 +315,6 @@ export default function NavigationBar() {
               ))
             )}
           </Menu>
-
           {/* Upload icon (icon only; removed the text Upload button) */}
           <Tooltip title={uploading ? "Uploading..." : "Upload document to RAG"}>
             <span>

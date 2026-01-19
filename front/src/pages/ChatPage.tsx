@@ -167,6 +167,31 @@ export default function ChatPage({ onLoggedOut }: { onLoggedOut?: () => void } =
 
   const [pleadingKey, setPleadingKey] = useState<string | undefined>(undefined);
 
+  // Guided Tour: when the motion creation tour ends, reset the UI to the initial home screen.
+  useEffect(() => {
+    const onResetHome = () => {
+      // Stop any streaming
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+      assistantIdRef.current = null;
+
+      // Reset selection + messages
+      setCurrent(null);
+      setMessages([]);
+      setPleadingSeed(undefined);
+      setPleadingKey(undefined);
+      setTitleEditing(false);
+      setPendingTitle("Untitled conversation");
+      setDraftTitle("");
+
+      // Close sidebar on mobile to show the home screen
+      setSidebarOpen(false);
+    };
+
+    window.addEventListener("juricrew:tour:resetHome", onResetHome as any);
+    return () => window.removeEventListener("juricrew:tour:resetHome", onResetHome as any);
+  }, []);
+
   // ===== Derived structures for sidebar =====
   const projectTree = useMemo(() => {
     const map = new Map<string, Project & { children: any[] }>();
